@@ -2,7 +2,7 @@ from tkinter import messagebox
 import subprocess
 import os
 from pytubefix import YouTube
-from . import youtube_dl_gui
+import youtube_dl_gui
 import multiprocessing as mp
 
 

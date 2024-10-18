@@ -358,8 +358,8 @@ class VideoGui(customtkinter.CTk):
         self.destroy()
 
     def on_closing(self):
-        global stop_event
-        stop_event.set()
+        # global stop_event
+        self.stop_event.set()
         print("Exiting")
         self.destroy()
         # sys.exit()

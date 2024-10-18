@@ -1,7 +1,7 @@
 """This package / project enables manual input of youtube download jobs -
 the download and processing of the video/audio happens asynchronously."""
 
-from . import media
+import media
 import multiprocessing as mp
 
 

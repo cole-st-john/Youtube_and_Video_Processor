@@ -1,6 +1,12 @@
 import pytest
+import sys
 import os
-from . import main
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+import main
+
 
 # from youtube_downloader.src.media import *
 
