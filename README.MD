@@ -28,6 +28,7 @@ Or **Better**, using UV (Kudos to Astral and Team) -
 
 ``
 pip install uv 
+
 uv sync
 ``
 
