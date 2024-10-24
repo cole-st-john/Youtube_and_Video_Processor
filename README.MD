@@ -42,9 +42,9 @@ uv sync
 
 Downloading video from youtube: 
 
-´´
+``
 python main.py
-´´
+``
 
 
 Enter video details:
