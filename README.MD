@@ -46,7 +46,9 @@ Downloading video from youtube:
 python main.py
 ´´
 
+
 Enter video details:
+
 ![Entering details in gui](https://raw.githubusercontent.com/cole-st-john/youtube_and_video_processor/master/images/example1.gif)
 
 Enjoy processed video
