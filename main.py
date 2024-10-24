@@ -15,9 +15,6 @@ def video_downloader_and_processor() -> None:
     # Constants / Flags
     continue_flag = True
 
-    # Event Flag for signaling process termination in subprocesses
-    stop_event = mp.Event()
-
     # Check whether there is a returned "done" flag, if not, continue
     while continue_flag:
         # create new video job (using gui) - block on the gui - but then allow async processing

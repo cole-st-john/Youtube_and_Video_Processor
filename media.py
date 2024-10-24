@@ -326,7 +326,8 @@ class Job:
             with open(YT_LAST_VALUES_FILE_PATH) as file:
                 raw_params = [str(line.strip()) for line in file]
         except FileNotFoundError:
-            return 0
+            return
+            # return 0
         else:
             self.raw_video_params["url"] = raw_params.pop(0)
             self.raw_video_params["filepath"] = raw_params.pop(0)
@@ -336,13 +337,13 @@ class Job:
             self.raw_video_params["cover"] = raw_params.pop(0)
             self.raw_video_params["speed"] = raw_params.pop(0)
 
-            return 1
+            # return 1
 
     def get_user_input_and_validate(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
         self.stop_event, raw_video_params = youtube_dl_gui.VideoGui(
-            self.raw_video_params
+            self
         ).get_user_input()
         if self.stop_event:
             return
@@ -389,6 +390,7 @@ class Video:
         self.extract_cover_photo()
         self.perform_composition()
         self.inform_complete()
+        self.document_job()
         self.open()
         self.clean_up()
 
@@ -412,7 +414,7 @@ class Video:
 
     def document_job(self):
         with open("last_file.txt", "w") as file:
-            file.write(self.filepath or "")
+            file.write(self.final_path or "")
 
         with open(YT_LAST_VALUES_FILE_PATH, "w") as file:
             value_string = "\n".join(

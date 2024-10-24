@@ -20,13 +20,13 @@ class VideoGui(customtkinter.CTk):
     App
     """
 
-    def __init__(self, video_params):
+    def __init__(self, job):
         super().__init__()
         # self.geometry(f"{1100}x{580}")
 
         self.user_quit = False
-
-        self.raw_gui_video_params = video_params
+        self.job = job
+        self.raw_gui_video_params = self.job.raw_video_params
 
         # GUI SETTINGS ====================================
         self.inputs_frame_dict = {
@@ -320,6 +320,9 @@ class VideoGui(customtkinter.CTk):
     def enter_last_values(self):
         # check for file
         # get last values
+        # if not any(self.raw_gui_video_params):
+        self.job.retrieve_last_params_from_file()
+        self.raw_gui_video_params = self.job.raw_video_params
         if not any(self.raw_gui_video_params):
             print("No last values found")
             return
