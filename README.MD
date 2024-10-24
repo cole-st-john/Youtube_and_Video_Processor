@@ -20,17 +20,16 @@ This is just another app around quickly fulfilling the needs I have most frequen
 
 Using pip:
 
-``
+```
 pip install -r requirements.txt
-``
+```
 
 Or **Better**, using UV (Kudos to Astral and Team) - 
 
-``
+```
 pip install uv 
-
 uv sync
-``
+```
 
 ### Getting External Core Components
 
@@ -43,9 +42,9 @@ uv sync
 
 Downloading video from youtube: 
 
-``
+```
 python main.py
-``
+```
 
 
 Enter video details:
