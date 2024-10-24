@@ -9,5 +9,4 @@ dependencies = [
 	"customtkinter>=5.2.2",
 	"pytest>=8.3.3",
 	"pytubefix>=8.1.1",
-	"ruff>=0.7.0",
 ]
