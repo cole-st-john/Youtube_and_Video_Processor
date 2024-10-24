@@ -6,6 +6,7 @@ I find myself commonly wanting to quickly process or archive youtube or other lo
 ## Current functionality
 
 This is just another app around quickly fulfilling the needs I have most frequently experienced:
+
 - Downloading high quality youtube videos (audio and video streams) or specifying local video file 
 - If separate streams - recombining media streams.
 - Cutting video / audio to single contiguous section - time from / time to
@@ -17,12 +18,14 @@ This is just another app around quickly fulfilling the needs I have most frequen
 
 ### Get Python Dependencies:
 
-Using pip  - 
+Using pip:
+
 ``
 pip install -r requirements.txt
 ``
 
 Or **Better**, using UV (Kudos to Astral and Team) - 
+
 ``
 pip install uv 
 uv sync
