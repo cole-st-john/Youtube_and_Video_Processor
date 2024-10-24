@@ -24,6 +24,8 @@ class VideoGui(customtkinter.CTk):
         super().__init__()
         # self.geometry(f"{1100}x{580}")
 
+        self.user_quit = False
+
         self.raw_gui_video_params = video_params
 
         # GUI SETTINGS ====================================
@@ -166,7 +168,7 @@ class VideoGui(customtkinter.CTk):
         self.last_values_btn_dict = {
             "row": 7,
             "column": 0,
-            "columnspan": 2,
+            # "columnspan": 2,
             "padx": (20, 20),
             "pady": (20, 20),
             "sticky": "nsew",
@@ -359,12 +361,11 @@ class VideoGui(customtkinter.CTk):
 
     def on_closing(self):
         # global stop_event
-        self.stop_event.set()
-        print("Exiting")
+        self.user_quit = True
+        print("User Chose to Exit Gui")
         self.destroy()
-        # sys.exit()
 
     def get_user_input(self):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.mainloop()
-        return self.raw_gui_video_params
+        return self.user_quit, self.raw_gui_video_params

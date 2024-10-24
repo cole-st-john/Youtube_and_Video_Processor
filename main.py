@@ -5,6 +5,11 @@ import media
 import multiprocessing as mp
 
 
+def dependency_check():
+    media.ffmpeg_command.check_if_available()
+    print("All dependencies found.")
+
+
 def video_downloader_and_processor() -> None:
     """Start video downloader and processor app"""
     # Constants / Flags
@@ -16,13 +21,13 @@ def video_downloader_and_processor() -> None:
     # Check whether there is a returned "done" flag, if not, continue
     while continue_flag:
         # create new video job (using gui) - block on the gui - but then allow async processing
-        media.video_job_scheduler()
+        continue_flag = not media.video_job_scheduler()
 
         # Check if the event is set (meaning a process signaled to stop)
-        if stop_event.is_set():
-            print("Ending Video app.")
-            continue_flag = False  # Exit the while loop
+        if not continue_flag:
+            print("Ending Video app elegantly.")
 
 
 if __name__ == "__main__":
+    dependency_check()
     video_downloader_and_processor()

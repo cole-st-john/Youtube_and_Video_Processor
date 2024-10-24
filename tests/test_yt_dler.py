@@ -8,8 +8,6 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 import main
 
 
-# from youtube_downloader.src.media import *
-
 # testing gui
 # testing dl functionality
 # testing composition functionality
@@ -22,6 +20,8 @@ Given: File object
 When: given no basename or path
 Then: returns default graphml basename and working dir path
 """
+
+EXAMPLE_VIDEO_1 = "https://youtu.be/BsGjkkPKbsk"
 
 
 class Test_Integration:

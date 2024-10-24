@@ -4,6 +4,7 @@ import os
 from pytubefix import YouTube
 import youtube_dl_gui
 import multiprocessing as mp
+import sys
 
 
 # Constants
@@ -42,6 +43,20 @@ class ffmpeg_command:
     """Composing and executing ffmpeg commands - enabling media processing"""
 
     ffmpeg_params: dict = dict()
+
+    @classmethod
+    def check_if_available(cls):
+        try:
+            subprocess.run(
+                ["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+        except FileNotFoundError:
+            print(
+                "Warning: FFMPEG is not installed or not available on the PATH.",
+                "Please install it from https://ffmpeg.org/download.html",
+                "& add to the PATH environmental variable.",
+            )
+            sys.exit()
 
     @classmethod
     def extract_cover_image(cls, video_path, cover_time, cover_image_path):
@@ -252,12 +267,11 @@ class Job:
     """Object enabling async job information and processing - including the stop flag"""
 
     def __init__(self):
-        global stop_event
-
         # initialize
         self.raw_video_params: dict = dict()
 
         # processed video params
+        self.stop_event = True
         self.url: str = ""
         self.filepath: str = ""
         self.name: str = ""
@@ -327,9 +341,11 @@ class Job:
     def get_user_input_and_validate(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
-        raw_video_params = youtube_dl_gui.VideoGui(
+        self.stop_event, raw_video_params = youtube_dl_gui.VideoGui(
             self.raw_video_params
         ).get_user_input()
+        if self.stop_event:
+            return
         self.process_inputs(raw_video_params)
 
 
@@ -538,7 +554,11 @@ def process_video(job):
     return Video(job)
 
 
-def video_job_scheduler():
+def video_job_scheduler() -> bool:
+    """Retrieves video job details and sends them for processing"""
     new_job = Job()
+    if new_job.stop_event:
+        return True
     job_to_process = mp.Process(target=process_video, args=(new_job,))
     job_to_process.start()
+    return False

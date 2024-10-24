@@ -1,0 +1,13 @@
+[project]
+name = "youtube_and_video_processor"
+version = "0.1.0"
+description = "Just another youtube downloader - with GUI input of jobs, async processing of video/audio/cover downloading and production."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+	"coverage>=7.6.4",
+	"customtkinter>=5.2.2",
+	"pytest>=8.3.3",
+	"pytubefix>=8.1.1",
+	"ruff>=0.7.0",
+]
