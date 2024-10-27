@@ -2,12 +2,7 @@
 the download and processing of the video/audio happens asynchronously."""
 
 import media
-import multiprocessing as mp
-
-
-def dependency_check():
-    media.ffmpeg_command.check_if_available()
-    print("All dependencies found.")
+from configuration import config  # get config info
 
 
 def video_downloader_and_processor() -> None:
@@ -26,5 +21,8 @@ def video_downloader_and_processor() -> None:
 
 
 if __name__ == "__main__":
-    dependency_check()
+    # Check dependencies
+    media.ffmpeg_command.check_if_available()
+
+    # Start app
     video_downloader_and_processor()

@@ -5,33 +5,32 @@ from pytubefix import YouTube
 import youtube_dl_gui
 import multiprocessing as mp
 import sys
+from configuration import config
+import customtkinter
 
 
-# Constants
-# TODO: MOVE TO DOCUMENTATION FROM CODE
-OUTPUT_PATH = r"C:\Users\Cole\Desktop"
-last_values_file_path = os.getcwd()
+last_values_file_path = config.output_path
 YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
 
 
-def check_whether_inputs_valid(url, filepath):
-    if not any([url, filepath]):
-        try:
-            with open("last_file.txt") as file:
-                potential_item = file.read().strip()
-                if "http" in potential_item:
-                    url = potential_item
-                else:
-                    filepath = potential_item
+# def check_whether_inputs_valid(url, filepath):
+#     if not any([url, filepath]):
+#         try:
+#             with open("last_file.txt") as file:
+#                 potential_item = file.read().strip()
+#                 if "http" in potential_item:
+#                     url = potential_item
+#                 else:
+#                     filepath = potential_item
 
-                if not any([url, filepath]):
-                    raise FileNotFoundError("No URL or Filepath given or found")
-        except FileExistsError:
-            print("File not found")
+#                 if not any([url, filepath]):
+#                     raise FileNotFoundError("No URL or Filepath given or found")
+#         except FileExistsError:
+#             print("File not found")
 
-    if not any([url, filepath]):
-        print(f"Closing program: {__file__}")
-        exit()
+#     if not any([url, filepath]):
+#         print(f"Closing program: {__file__}")
+#         exit()
 
 
 def show_completed_msg(video):
@@ -57,6 +56,8 @@ class ffmpeg_command:
                 "& add to the PATH environmental variable.",
             )
             sys.exit()
+        else:
+            print("All dependencies found.")
 
     @classmethod
     def extract_cover_image(cls, video_path, cover_time, cover_image_path):
@@ -239,7 +240,7 @@ class Image:
     """Object carrying common cover image information/methods"""
 
     def __init__(self, video_path, cover_time):
-        self.path = OUTPUT_PATH
+        self.path = config.output_path
         self.name = "cover_pic"
         self.ext = ".jpg"
         self.cover_image_path = self.generate_cover_img_path()
@@ -292,6 +293,7 @@ class Job:
 
         # Pushing into processed parameters
         self.url = raw_params.get("url", "")
+        self.url = self.url.replace('"', "")
         self.url = self.url.split("&")[0] if "&" in self.url else self.url
 
         self.filepath = raw_params.get("filepath", "")
@@ -413,9 +415,7 @@ class Video:
             return 1
 
     def document_job(self):
-        with open("last_file.txt", "w") as file:
-            file.write(self.final_path or "")
-
+        self.filepath = self.final_path
         with open(YT_LAST_VALUES_FILE_PATH, "w") as file:
             value_string = "\n".join(
                 [
@@ -439,7 +439,7 @@ class Video:
             from random import randint
 
             self.name = "".join([str(randint(0, 9)) for _ in range(4)])
-        return os.path.join(OUTPUT_PATH, self.name + ".mp4")
+        return os.path.join(config.output_path, self.name + ".mp4")
 
     def download_from_yt(self):
         """If yt video, downloads highest res stream:
@@ -465,7 +465,9 @@ class Video:
             # Downloading video stream in high res
             temp_file_name = "temp_video" + "_" + self.video_process
             print(f"Downloading Video: {yt_video_obj.title}")
-            self.video_stream = stream.download(OUTPUT_PATH, filename=temp_file_name)
+            self.video_stream = stream.download(
+                config.output_path, filename=temp_file_name
+            )
             print(f"Finished dl: {self.video_stream}")
             self.temp_raw_files.append(self.video_stream)
 
@@ -479,7 +481,7 @@ class Video:
                     .order_by("bitrate")
                     .desc()
                     .first()
-                    .download(OUTPUT_PATH, filename=temp_file_name)
+                    .download(config.output_path, filename=temp_file_name)
                 )
                 print(f"Finished dl: {self.audio_stream }")
                 self.temp_raw_files.append(self.audio_stream)
@@ -498,7 +500,8 @@ class Video:
     def perform_composition(self):
         with self.processing_lock:
             temp_vid_aud_path = os.path.join(
-                OUTPUT_PATH, self.name + "_" + self.video_process + "_proc_aud_vid.mp4"
+                config.output_path,
+                self.name + "_" + self.video_process + "_proc_aud_vid.mp4",
             )
             ffmpeg_command.process_video_only_changes(
                 self.single_stream,
