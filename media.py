@@ -2,35 +2,14 @@ from tkinter import messagebox
 import subprocess
 import os
 from pytubefix import YouTube
-import youtube_dl_gui
+import video_job_gui
 import multiprocessing as mp
 import sys
 from configuration import config
-import customtkinter
 
 
 last_values_file_path = config.output_path
 YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
-
-
-# def check_whether_inputs_valid(url, filepath):
-#     if not any([url, filepath]):
-#         try:
-#             with open("last_file.txt") as file:
-#                 potential_item = file.read().strip()
-#                 if "http" in potential_item:
-#                     url = potential_item
-#                 else:
-#                     filepath = potential_item
-
-#                 if not any([url, filepath]):
-#                     raise FileNotFoundError("No URL or Filepath given or found")
-#         except FileExistsError:
-#             print("File not found")
-
-#     if not any([url, filepath]):
-#         print(f"Closing program: {__file__}")
-#         exit()
 
 
 def show_completed_msg(video):
@@ -344,7 +323,7 @@ class Job:
     def get_user_input_and_validate(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
-        self.stop_event, raw_video_params = youtube_dl_gui.VideoGui(
+        self.stop_event, raw_video_params = video_job_gui.VideoGui(
             self
         ).get_user_input()
         if self.stop_event:
@@ -354,7 +333,6 @@ class Job:
 
 class Video:
     def __init__(self, job):
-        global stop_event
         self.video_process = str(os.getpid())
         self.processing_lock = mp.Lock()
 

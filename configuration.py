@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 
 class Config_Gui(customtkinter.CTk):
+    """Providing a GUI for configuration process"""
+
     def __init__(self):
         super().__init__()
         # self.geometry(f"{1100}x{580}")
@@ -60,13 +62,13 @@ class Config_Gui(customtkinter.CTk):
 
         # output path
 
-        self.output_path_label = tk.Label(self.inputs_frame, text="Youtube URL:")
+        self.output_path_label = tk.Label(self.inputs_frame, text="Output Path: ")
         self.output_path_label.grid(**self.output_path_label_dict)
 
         self.output_path_textvar = tk.StringVar()
         self.output_path_entry = customtkinter.CTkEntry(
             self.inputs_frame,
-            placeholder_text="Youtube URL",
+            placeholder_text="Enter filepath here",
             textvariable=self.output_path_textvar,
         )
         self.output_path_entry.grid(**self.output_path_entry_dict)
@@ -115,6 +117,8 @@ class Configuration_Info:
 
 
 class Configuration:
+    """Providing for user configuration of the app through gui and separate saving of configuration file"""
+
     def __init__(self):
         config_filename = "video_process_config.ini"
         self.config_path = os.path.dirname(os.path.abspath(__file__))
@@ -160,4 +164,5 @@ class Configuration:
 
 
 # Get configs
+print("Executing configuration....")
 config = Configuration().get_config_information()

@@ -195,6 +195,17 @@ class VideoGui(customtkinter.CTk):
         self.inputs_frame = customtkinter.CTkFrame(self)
         self.inputs_frame.grid(**self.inputs_frame_dict)
 
+        # create tabview
+        self.tabview = customtkinter.CTkTabview(self, width=250)
+        self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.tabview.add("Youtube Video")
+        self.tabview.add("Local File")
+        self.tabview.add("Last")
+        self.tabview.tab("Youtube Video").grid_columnconfigure(
+            0, weight=1
+        )  # configure grid of individual tabs
+        self.tabview.tab("Local File").grid_columnconfigure(0, weight=1)
+
         # url
 
         self.url_label = tk.Label(self.inputs_frame, text="Youtube URL:")

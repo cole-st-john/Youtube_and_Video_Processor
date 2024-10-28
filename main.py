@@ -10,13 +10,14 @@ def video_downloader_and_processor() -> None:
     # Constants / Flags
     continue_flag = True
 
-    # Check whether there is a returned "done" flag, if not, continue
-    while continue_flag:
+    # Check whether there is a returned "end" flag, if not, continue
+    end_flag = False
+    while not end_flag:
         # create new video job (using gui) - block on the gui - but then allow async processing
-        continue_flag = not media.video_job_scheduler()
+        end_flag = media.video_job_scheduler()
 
-        # Check if the event is set (meaning a process signaled to stop)
-        if not continue_flag:
+        # Check if the event is set (meaning user signaled to stop further videos)
+        if end_flag:
             print("Ending Video app elegantly.")
 
 
