@@ -7,3 +7,6 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 os.chdir(SCRIPT_DIR)
 os.system("coverage run -m pytest .")
+
+# Viewing Coverage
+os.system("coverage html")

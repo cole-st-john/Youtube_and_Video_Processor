@@ -2,10 +2,12 @@ from tkinter import messagebox
 import subprocess
 import os
 from pytubefix import YouTube
+from pytubefix import exceptions as pytubeexceptions
 import video_job_gui
 import multiprocessing as mp
 import sys
 from configuration import config
+import shutil
 
 
 last_values_file_path = config.output_path
@@ -19,6 +21,8 @@ def show_completed_msg(video):
 
 class ffmpeg_command:
     """Composing and executing ffmpeg commands - enabling media processing"""
+
+    # Resource: https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video
 
     ffmpeg_params: dict = dict()
 
@@ -81,19 +85,26 @@ class ffmpeg_command:
                     video_path,
                 ]
 
+                if speed and speed >= 0.5 and speed <= 2:
+                    # -filter_complex "[0:v]setpts=0.5*PTS[v];[0:a]atempo=2.0[a]"
+                    ffmpeg_args += [
+                        "-filter_complex",
+                        f"[0:v]setpts={1/speed}*PTS[v];[0:a]atempo={speed}[a]",
+                    ]
+
+                    # Mapping audio to video
+                    ffmpeg_args += [
+                        "-map",
+                        "[v]",
+                        "-map",
+                        "[a]",
+                    ]
+
                 # Avoid re-encoding if speed not changing - not sure what else drives this
-                # FIXME:
                 if not speed:
                     ffmpeg_args += [
                         "-c",
                         "copy",
-                    ]
-
-                # Set actual new speed asked for by user
-                if speed and speed >= 0.5 and speed <= 2:
-                    ffmpeg_args += [
-                        "-filter:a",
-                        f"atempo={speed}",
                     ]
 
                 # where to output it
@@ -103,8 +114,9 @@ class ffmpeg_command:
                 ]
                 cls.execute(ffmpeg_args)
             else:
-                # Or just rename to new naming?
-                os.rename(video_path, output_path)
+                # Or just copy to new naming?
+                shutil.copy(video_path, output_path)
+                # os.rename(video_path, output_path)
 
     @classmethod
     def process_audio_and_video(
@@ -143,25 +155,43 @@ class ffmpeg_command:
             ffmpeg_args += [
                 "-i",
                 video_path,
-                "-map",
-                "0:a",
-                "-map",
-                "1",
             ]
 
+            # Set actual new speed asked for by user
+            # if speed and speed >= 0.5 and speed <= 2:
+            #     ffmpeg_args += [
+            #         "-filter:a",
+            #         f"atempo={speed}",
+            #     ]
+            if speed and speed >= 0.5 and speed <= 2:
+                # -filter_complex "[0:v]setpts=0.5*PTS[v];[0:a]atempo=2.0[a]"
+                ffmpeg_args += [
+                    "-filter_complex",
+                    f"[1:v]setpts={1/speed}*PTS[v];[0:a]atempo={speed}[a]",
+                ]
+
+                # Mapping audio to video
+                ffmpeg_args += [
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "[a]",
+                ]
+
+            else:
+                # Mapping audio to video
+                ffmpeg_args += [
+                    "-map",
+                    "0:a",
+                    "-map",
+                    "1",
+                ]
+
             # Avoid re-encoding if speed not changing - not sure what else drives this
-            # FIXME:
             if not speed:
                 ffmpeg_args += [
                     "-c",
                     "copy",
-                ]
-
-            # Set actual new speed asked for by user
-            if speed and speed >= 0.5 and speed <= 2:
-                ffmpeg_args += [
-                    "-filter:a",
-                    f"atempo={speed}",
                 ]
 
             # Output path
@@ -210,9 +240,10 @@ class ffmpeg_command:
             os.rename(vid_aud_path, output_path)
 
     @classmethod
-    def execute(cls, ffmpeg_pic_args):
-        ffmpeg_pic_args = [str(arg) for arg in ffmpeg_pic_args]
-        subprocess.run(ffmpeg_pic_args)
+    def execute(cls, ffmpeg_args):
+        ffmpeg_args = [str(arg) for arg in ffmpeg_args]
+        print(" ".join(ffmpeg_args))
+        subprocess.run(ffmpeg_args)
 
 
 class Image:
@@ -260,6 +291,7 @@ class Job:
         self.cover_time: float | None
         self.speed_mult: float | None
         self.single_stream = False
+        self.valid_inputs = True
 
         # Process
         self.begin_process()
@@ -282,30 +314,65 @@ class Job:
             if param:
                 return float(param)
 
-        self.start_time = float_convert(raw_params.get("start", 0)) or 0
-        self.end_time = float_convert(raw_params.get("end", None))
-        self.cover_time = float_convert(raw_params.get("cover", None))
-        self.speed_mult = float_convert(raw_params.get("speed", None))
+        def time_conversion_to_secs(time_entry):
+            # early return for no entry
+            if not time_entry:
+                return
+
+            # account for two time formats
+            if ":" in time_entry:
+                split_items = time_entry.split(":")
+                if len(split_items) == 2:
+                    h, m, seconds = 0, *split_items
+                else:
+                    h, m, seconds = split_items
+            else:
+                h, m, seconds = 0, 0, time_entry
+            h = h or 0
+            m = m or 0
+            seconds = seconds or 0
+
+            # Ensure float
+            h, m, seconds = float(h), float(m), float(seconds)
+
+            # Turn to seconds for simplicity
+            seconds = h * 3600 + m * 60 + seconds
+
+            # print("time convert:", time_entry, seconds)
+            return seconds
+
+        self.start_time = time_conversion_to_secs(raw_params.get("start", 0)) or 0
+        self.end_time = time_conversion_to_secs(raw_params.get("end", None))
+        self.cover_time = time_conversion_to_secs(raw_params.get("cover", None))
+        self.speed_mult = time_conversion_to_secs(raw_params.get("speed", None))
 
         # process filepath for quotations (windows)
         self.filepath = self.filepath.replace('"', "")
+
+        if self.filepath:
+            self.url = ""
+            self.single_stream = True
 
         # Validate Url
         if self.url:
             # if just id - make work for that
 
             # valid url check
-
-            self.filepath = ""
-        else:
-            self.single_stream = True
+            # priority - url
+            # self.filepath = ""
+            pass
 
     def retrieve_last_params_from_file(self):
         """At user request - pull in last used / saved parameters from local file"""
         raw_params = list()
         try:
             with open(YT_LAST_VALUES_FILE_PATH) as file:
-                raw_params = [str(line.strip()) for line in file]
+                raw_params = [str(line).strip() for line in file]
+
+                def transform_nulls(x):
+                    return None if x == "None" else x
+
+                raw_params = [transform_nulls(x) for x in raw_params]
         except FileNotFoundError:
             return
             # return 0
@@ -320,6 +387,16 @@ class Job:
 
             # return 1
 
+    def validate_inputs(self):
+        if not any([self.filepath, self.url]):
+            # TODO: ADD ERROR RAISING
+            self.valid_inputs = False
+            print("Error - No valid URL or filepath given.")
+            messagebox.showerror(
+                title="Video Inputs - Error",
+                message="Invalid input for Video URL or Filepath.",
+            )
+
     def get_user_input_and_validate(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
@@ -329,6 +406,7 @@ class Job:
         if self.stop_event:
             return
         self.process_inputs(raw_video_params)
+        self.validate_inputs()
 
 
 class Video:
@@ -356,8 +434,8 @@ class Video:
 
         # video processing related
         self.cover_image_path: str = ""
-        self.video_stream: str
-        self.audio_stream: str
+        self.video_stream: str | None = ""
+        self.audio_stream: str | None = ""
         self.temp_raw_files = list()
 
         # Process
@@ -366,7 +444,11 @@ class Video:
     def begin_process(self):
         # self.get_user_input()
         self.final_path = self.generate_video_path()
-        self.download_from_yt()
+        # Triage
+        if self.url:
+            self.download_from_yt()
+        else:
+            self.video_stream = self.filepath
         self.extract_cover_photo()
         self.perform_composition()
         self.inform_complete()
@@ -378,7 +460,7 @@ class Video:
         raw_params = list()
         try:
             with open(YT_LAST_VALUES_FILE_PATH) as file:
-                raw_params = [str(line.strip()) for line in file]
+                raw_params = [str(line.strip()) if not "None" else "" for line in file]
         except FileNotFoundError:
             return 0
         else:
@@ -413,6 +495,7 @@ class Video:
             file.write(value_string)
 
     def generate_video_path(self):
+        """gives name if no name & generates path"""
         if not self.name:
             from random import randint
 
@@ -425,27 +508,36 @@ class Video:
         sometimes separate video / audio
         can have multiple file formats
         """
-        self.video_stream = ""
-        self.audio_stream = ""
 
         # Early return
         if not self.url:
             return
 
         with self.processing_lock:
-            yt_video_obj = YouTube(url=self.url)
+            try:
+                yt_video_obj = YouTube(url=self.url)
 
-            # get highest res video / and audio
-            streams = yt_video_obj.streams
-            stream = streams.filter(type="video").order_by("bitrate").desc().first()
-            single_stream = stream.includes_audio_track
+                # get highest res video / and audio
+                streams = yt_video_obj.streams
+                stream = streams.filter(type="video").order_by("bitrate").desc().first()
+                if stream:
+                    single_stream = stream.includes_audio_track
+                else:
+                    # TODO:
 
-            # Downloading video stream in high res
-            temp_file_name = "temp_video" + "_" + self.video_process
-            print(f"Downloading Video: {yt_video_obj.title}")
-            self.video_stream = stream.download(
-                config.output_path, filename=temp_file_name
-            )
+                    return
+
+                # Downloading video stream in high res
+                temp_file_name = "temp_video" + "_" + self.video_process
+                print(f"Downloading Video: {yt_video_obj.title}")
+
+                self.video_stream = stream.download(
+                    config.output_path, filename=temp_file_name
+                )
+            except pytubeexceptions.VideoUnavailable as ex:
+                print(f"This is not a valid video:\n{self.url}")
+                return
+
             print(f"Finished dl: {self.video_stream}")
             self.temp_raw_files.append(self.video_stream)
 
@@ -489,6 +581,7 @@ class Video:
                 self.end_time,
                 self.speed_mult,
             )
+
             ffmpeg_command.process_audio_and_video(
                 self.single_stream,
                 self.video_stream,
@@ -539,9 +632,14 @@ def process_video(job):
 
 def video_job_scheduler() -> bool:
     """Retrieves video job details and sends them for processing"""
+
     new_job = Job()
+
     if new_job.stop_event:
         return True
-    job_to_process = mp.Process(target=process_video, args=(new_job,))
-    job_to_process.start()
+
+    if new_job.valid_inputs:
+        job_to_process = mp.Process(target=process_video, args=(new_job,))
+        job_to_process.start()
+
     return False

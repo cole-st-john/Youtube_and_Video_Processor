@@ -196,15 +196,15 @@ class VideoGui(customtkinter.CTk):
         self.inputs_frame.grid(**self.inputs_frame_dict)
 
         # create tabview
-        self.tabview = customtkinter.CTkTabview(self, width=250)
-        self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.tabview.add("Youtube Video")
-        self.tabview.add("Local File")
-        self.tabview.add("Last")
-        self.tabview.tab("Youtube Video").grid_columnconfigure(
-            0, weight=1
-        )  # configure grid of individual tabs
-        self.tabview.tab("Local File").grid_columnconfigure(0, weight=1)
+        # self.tabview = customtkinter.CTkTabview(self, width=250)
+        # self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        # self.tabview.add("Youtube Video")
+        # self.tabview.add("Local File")
+        # self.tabview.add("Last")
+        # self.tabview.tab("Youtube Video").grid_columnconfigure(
+        #     0, weight=1
+        # )  # configure grid of individual tabs
+        # self.tabview.tab("Local File").grid_columnconfigure(0, weight=1)
 
         # url
 
@@ -309,25 +309,6 @@ class VideoGui(customtkinter.CTk):
         )
         self.entry_confirm_btn.grid(**self.entry_confirm_btn_dict)
 
-    def time_conversion(self, entry):
-        if ":" in entry:
-            split_items = entry.split(":")
-            if len(split_items) == 2:
-                h, m, seconds = 0, *split_items
-            else:
-                h, m, seconds = split_items
-        else:
-            h, m, seconds = 0, 0, entry
-        h = h or 0
-        m = m or 0
-        seconds = seconds or 0
-
-        h, m, seconds = float(h), float(m), float(seconds)
-
-        seconds = h * 3600 + m * 60 + seconds
-        print("time convert:", entry, seconds)
-        return str(seconds)
-
     def enter_last_values(self):
         # check for file
         # get last values
@@ -340,7 +321,7 @@ class VideoGui(customtkinter.CTk):
 
         url = self.raw_gui_video_params["url"]
         filepath = self.raw_gui_video_params["filepath"]
-        name = self.raw_gui_video_params["name"]
+        # name = self.raw_gui_video_params["name"]
         start = self.raw_gui_video_params["start"]
         end = self.raw_gui_video_params["end"]
         cover = self.raw_gui_video_params["cover"]
@@ -349,14 +330,14 @@ class VideoGui(customtkinter.CTk):
         # populate last values
         self.url_textvar.set(url)
         self.file_textvar.set(filepath)
-        self.name_textvar.set(name)
-        if float(start):
+        # self.name_textvar.set(name)
+        if start and float(start):
             self.start_var.set(start)
-        if float(end):
+        if end and float(end):
             self.end_var.set(end)
-        if float(cover):
+        if cover and float(cover):
             self.cover_var.set(cover)
-        if float(speed):
+        if speed and float(speed):
             self.speed_var.set(speed)
 
         # refresh gui

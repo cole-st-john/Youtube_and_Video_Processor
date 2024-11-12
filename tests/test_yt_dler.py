@@ -2,6 +2,7 @@ import pytest
 import sys
 import os
 from configuration import config
+import media
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -50,7 +51,19 @@ class Test_File:
 
 
 # def check_whether_inputs_valid(url, filepath):
-# def show_completed_msg(video):
+
+
+def test_show_completed_msg():
+    """
+    Given: nothing - base unit test
+    When: calling message box
+    Then: msg shows up
+    """
+    video_name = "ABC.mp4"
+    media.show_completed_msg(video_name)
+    assert 1 == 1  # assert made it this far
+
+
 # class ffmpeg_command:
 #     def extract_cover_image(cls, video_path, cover_time, cover_image_path):
 #     def process_video_only_changes(
@@ -61,16 +74,25 @@ class Test_File:
 #     ):
 #     def add_image_to_video(cls, vid_aud_path, cover, img_path, output_path):
 #     def execute(cls, ffmpeg_pic_args):
+
+
 # class Image:
 #     def __init__(self, video_path, cover_time):
 #     def generate_cover_img_path(self):
 #     def generate_cover_image(self, video_path, cover_time):
-# class Job:
-#     def __init__(self):
-#     def begin_process(self):
-#     def process_inputs(self, raw_params: dict):
-#     def retrieve_last_params_from_file(self):
-#     def get_user_input_and_validate(self):
+
+
+class Test_Job:
+
+    def test_init(self):
+        pass 
+
+    def begin_process(self):
+    def process_inputs(self, raw_params: dict):
+    def retrieve_last_params_from_file(self):
+    def get_user_input_and_validate(self):
+
+
 # class Video:
 #     def begin_process(self):
 #     def retrieve_last_params_from_file(self):
@@ -83,6 +105,40 @@ class Test_File:
 #     def clean_up(self):
 #     def open(self):
 #     def inform_complete(self):
+
+
 # def instantiate_video(job):
 # def process_video(job):
 # def video_job_scheduler():
+
+
+    """
+    Given: gui input data, including valid file path
+    When: processing video
+    Then: should process from filepath
+    """
+
+    """
+    Given: gui input data, including valid youtube url with high res streams
+    When: processing video
+    Then: should create video with vid/aud from url
+    """
+
+    """
+    Given: gui input data, including valid youtube url with only low-res combined mp4
+    When: processing video
+    Then: should skip audio/video comb stream 
+    """
+
+    """
+    Given: gui input data, with times in seconds
+    When: processing video
+    Then: should use time in seconds
+    """
+
+    """
+    Given: gui input data, with times in mm:ss(.s*)?
+    When: processing video
+    Then: should use time in converted seconds
+    """
+    
