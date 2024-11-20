@@ -2,7 +2,8 @@ from tkinter import messagebox
 import subprocess
 import os
 from pytubefix import YouTube
-from pytubefix import exceptions as pytubeexceptions
+
+# from pytubefix import exceptions as pytubeexceptions
 import video_job_gui
 import multiprocessing as mp
 import sys
@@ -61,10 +62,10 @@ class ffmpeg_command:
 
     @classmethod
     def process_video_only_changes(
-        cls, single_stream, video_path, output_path, start, end, speed
+        cls, combined_stream, video_path, output_path, start, end, speed
     ):
-        """Processing video changes - cutting, speed"""
-        if single_stream:
+        """Processing video changes - cutting, speed - to single video stream (likely with audio included)"""
+        if combined_stream:
             if any([start, end, speed]):
                 # Cut =========================
                 ffmpeg_args = [
@@ -93,6 +94,7 @@ class ffmpeg_command:
                     ]
 
                     # Mapping audio to video
+                    # TODO: DOES THIS WORK FOR VIDEO WITH NO AUDIO?
                     ffmpeg_args += [
                         "-map",
                         "[v]",
@@ -120,10 +122,10 @@ class ffmpeg_command:
 
     @classmethod
     def process_audio_and_video(
-        cls, single_stream, video_path, audio_path, output_path, start, end, speed
+        cls, combined_stream, video_path, audio_path, output_path, start, end, speed
     ):
-        """Cutting / re-encoding audio and video streams"""
-        if not single_stream:
+        """Cutting / re-encoding separate audio and video streams"""
+        if not combined_stream:
             # For video cutting ======================
             ffmpeg_args = [
                 "ffmpeg",
@@ -241,6 +243,7 @@ class ffmpeg_command:
 
     @classmethod
     def execute(cls, ffmpeg_args):
+        """Process arguments in FFMPEG"""
         ffmpeg_args = [str(arg) for arg in ffmpeg_args]
         print(" ".join(ffmpeg_args))
         subprocess.run(ffmpeg_args)
@@ -264,7 +267,7 @@ class Image:
     def generate_cover_image(self, video_path, cover_time):
         """Extracts thumbnail from video at certain time.
         ffmpeg syntax
-        # ffmpeg -i "Dont suck  SUCK CREEK RACE.webm" -ss 00:00:01.000 -vframes 1  hallo.jpg
+        # ffmpeg -i "input.webm" -ss 00:00:01.000 -vframes 1  hallo.jpg
         """
 
         ffmpeg_command.extract_cover_image(
@@ -275,7 +278,7 @@ class Image:
 
 
 class Job:
-    """Object enabling async job information and processing - including the stop flag"""
+    """Object enabling user input of  video job information and processing - including a stop flag for the app"""
 
     def __init__(self):
         # initialize
@@ -290,7 +293,7 @@ class Job:
         self.end_time: float | None
         self.cover_time: float | None
         self.speed_mult: float | None
-        self.single_stream = False
+        self.combined_stream = False
         self.valid_inputs = True
 
         # Process
@@ -309,10 +312,6 @@ class Job:
 
         self.filepath = raw_params.get("filepath", "")
         self.name = raw_params.get("name", "")
-
-        def float_convert(param):
-            if param:
-                return float(param)
 
         def time_conversion_to_secs(time_entry):
             # early return for no entry
@@ -350,22 +349,14 @@ class Job:
         self.filepath = self.filepath.replace('"', "")
 
         if self.filepath:
-            self.url = ""
-            self.single_stream = True
-
-        # Validate Url
-        if self.url:
-            # if just id - make work for that
-
-            # valid url check
-            # priority - url
-            # self.filepath = ""
-            pass
+            self.url = ""  # clear url and trust filepath as source
+            self.combined_stream = True
 
     def retrieve_last_params_from_file(self):
         """At user request - pull in last used / saved parameters from local file"""
         raw_params = list()
         try:
+            # Read previous file params from file
             with open(YT_LAST_VALUES_FILE_PATH) as file:
                 raw_params = [str(line).strip() for line in file]
 
@@ -373,10 +364,12 @@ class Job:
                     return None if x == "None" else x
 
                 raw_params = [transform_nulls(x) for x in raw_params]
+
         except FileNotFoundError:
             return
-            # return 0
+
         else:
+            # Port in previous parameters
             self.raw_video_params["url"] = raw_params.pop(0)
             self.raw_video_params["filepath"] = raw_params.pop(0)
             self.raw_video_params["name"] = raw_params.pop(0)
@@ -385,24 +378,31 @@ class Job:
             self.raw_video_params["cover"] = raw_params.pop(0)
             self.raw_video_params["speed"] = raw_params.pop(0)
 
-            # return 1
-
     def validate_inputs(self):
+        """Perform a few basic checks of the user inputs for video processing"""
+        if self.url:
+            try:
+                YouTube(self.url).check_availability()
+            except Exception as ex:
+                print(f"{ex}")
+                self.valid_inputs = False
         if not any([self.filepath, self.url]):
             # TODO: ADD ERROR RAISING
             self.valid_inputs = False
+
+        if not self.valid_inputs:
             print("Error - No valid URL or filepath given.")
             messagebox.showerror(
-                title="Video Inputs - Error",
+                title="Video Input Error",
                 message="Invalid input for Video URL or Filepath.",
             )
 
     def get_user_input_and_validate(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
-        self.stop_event, raw_video_params = video_job_gui.VideoGui(
+        self.stop_event, raw_video_params = video_job_gui.VideoJobGui(
             self
-        ).get_user_input()
+        ).execute_gui()
         if self.stop_event:
             return
         self.process_inputs(raw_video_params)
@@ -410,6 +410,8 @@ class Job:
 
 
 class Video:
+    """Object owning video processing methods"""
+
     def __init__(self, job):
         self.video_process = str(os.getpid())
         self.processing_lock = mp.Lock()
@@ -425,7 +427,7 @@ class Video:
         self.end_time: float | None
         self.cover_time: float | None
         self.speed_mult: float | None
-        self.single_stream: bool
+        self.combined_stream: bool
 
         # transfer properties?
         for key, value in job.__dict__.items():
@@ -438,44 +440,51 @@ class Video:
         self.audio_stream: str | None = ""
         self.temp_raw_files = list()
 
-        # Process
-        self.begin_process()
+        # Initiate Video Processing
+        self.process_video()
 
-    def begin_process(self):
-        # self.get_user_input()
+    def process_video(self):
+        # Ensure there is a path for final output
         self.final_path = self.generate_video_path()
-        # Triage
+
+        # Triage for whether yt download is required
         if self.url:
             self.download_from_yt()
         else:
             self.video_stream = self.filepath
-        self.extract_cover_photo()
-        self.perform_composition()
-        self.inform_complete()
-        self.document_job()
-        self.open()
-        self.clean_up()
+
+        self.extract_cover_photo_from_video()
+        self.peform_stream_composition()
+        self.inform_of_process_completion()
+        self.document_job_parameters()
+        self.open_video_result()
+        self.clean_up_temp_files()
 
     def retrieve_last_params_from_file(self):
-        raw_params = list()
+        """Pull previous video job parameters from a file - if there - to hand off to GUI"""
+        raw_video_job_params = list()
         try:
             with open(YT_LAST_VALUES_FILE_PATH) as file:
-                raw_params = [str(line.strip()) if not "None" else "" for line in file]
+                raw_video_job_params = [
+                    str(line.strip()) if not "None" else "" for line in file
+                ]
         except FileNotFoundError:
             return 0
         else:
-            self.raw_video_params["url"] = raw_params.pop(0)
-            self.raw_video_params["filepath"] = raw_params.pop(0)
-            self.raw_video_params["name"] = raw_params.pop(0)
-            self.raw_video_params["start"] = raw_params.pop(0)
-            self.raw_video_params["end"] = raw_params.pop(0)
-            self.raw_video_params["cover"] = raw_params.pop(0)
-            self.raw_video_params["speed"] = raw_params.pop(0)
+            self.raw_video_params["url"] = raw_video_job_params.pop(0)
+            self.raw_video_params["filepath"] = raw_video_job_params.pop(0)
+            self.raw_video_params["name"] = raw_video_job_params.pop(0)
+            self.raw_video_params["start"] = raw_video_job_params.pop(0)
+            self.raw_video_params["end"] = raw_video_job_params.pop(0)
+            self.raw_video_params["cover"] = raw_video_job_params.pop(0)
+            self.raw_video_params["speed"] = raw_video_job_params.pop(0)
 
             return 1
 
-    def document_job(self):
+    def document_job_parameters(self):
+        """Document previous video job parameters to use in GUI next use - if desired by user."""
         self.filepath = self.final_path
+        # Overwrite/create file contents with new parameters
         with open(YT_LAST_VALUES_FILE_PATH, "w") as file:
             value_string = "\n".join(
                 [
@@ -495,56 +504,65 @@ class Video:
             file.write(value_string)
 
     def generate_video_path(self):
-        """gives name if no name & generates path"""
+        """Generates name and path - random name if no name & generates path"""
+        # Generate a name if needed
         if not self.name:
             from random import randint
 
             self.name = "".join([str(randint(0, 9)) for _ in range(4)])
+
+        # Assemble and return a full path
         return os.path.join(config.output_path, self.name + ".mp4")
 
     def download_from_yt(self):
-        """If yt video, downloads highest res stream:
+        """If yt video,
+        download it (it's stream(s)).
+        Specifically - highest res stream:
         sometimes combined video / audio
         sometimes separate video / audio
-        can have multiple file formats
+        can have multiple file format output
         """
 
-        # Early return
+        # Early return if no youtube url to be downloaded
         if not self.url:
             return
 
         with self.processing_lock:
-            try:
-                yt_video_obj = YouTube(url=self.url)
+            yt_video_obj = YouTube(url=self.url)
 
-                # get highest res video / and audio
-                streams = yt_video_obj.streams
-                stream = streams.filter(type="video").order_by("bitrate").desc().first()
-                if stream:
-                    single_stream = stream.includes_audio_track
-                else:
-                    # TODO:
+            # get highest res video / and audio
+            streams = yt_video_obj.streams
 
-                    return
+            # Get high res version
+            stream = streams.filter(type="video").order_by("bitrate").desc().first()
 
-                # Downloading video stream in high res
-                temp_file_name = "temp_video" + "_" + self.video_process
-                print(f"Downloading Video: {yt_video_obj.title}")
+            # Do we need to also look for separate audio stream
+            combined_stream = stream.includes_audio_track
 
-                self.video_stream = stream.download(
-                    config.output_path, filename=temp_file_name
-                )
-            except pytubeexceptions.VideoUnavailable as ex:
-                print(f"This is not a valid video:\n{self.url}")
-                return
+            # Generate a temp stream name
+            temp_file_name = "temp_video" + "_" + self.video_process
+            print(f"Downloading Video: {yt_video_obj.title}")
 
+            # Download the stream
+            self.video_stream = stream.download(
+                config.output_path, filename=temp_file_name
+            )
+
+            # Inform complete
             print(f"Finished dl: {self.video_stream}")
+
+            # Flag for later deletion / clean up
             self.temp_raw_files.append(self.video_stream)
 
             # Recording audio stream if there is separate audio stream as part of high res pairing
-            if not single_stream:
-                streams = yt_video_obj.streams
+            if not combined_stream:
+                # Generate temp stream name
                 temp_file_name = "temp_audio" + "_" + self.video_process
+
+                # Get available streams
+                streams = yt_video_obj.streams
+
+                # Download stream - highest res
                 print("Downloading audio")
                 self.audio_stream = (
                     streams.filter(type="audio")
@@ -554,45 +572,50 @@ class Video:
                     .download(config.output_path, filename=temp_file_name)
                 )
                 print(f"Finished dl: {self.audio_stream }")
+
+                # Flag for later completion
                 self.temp_raw_files.append(self.audio_stream)
 
-                self.single_stream = not self.audio_stream
+                # Ensure this flag is correct (edge case - no audio available and no audio included in vid)
+                self.combined_stream = not self.audio_stream
 
-    def extract_cover_photo(self):
-        """Extract cover photo"""
+    def extract_cover_photo_from_video(self):
+        """Extract cover photo from video file"""
         if self.cover_time:
             with self.processing_lock:
                 self.cover_image_path = Image(
                     self.video_stream, self.cover_time
                 ).cover_image_path
+
+                # Flag cover image for later deletion
                 self.temp_raw_files.append(self.cover_image_path)
 
-    def perform_composition(self):
+    def peform_stream_composition(self):
         with self.processing_lock:
-            temp_vid_aud_path = os.path.join(
+            temp_combined_stream_path = os.path.join(
                 config.output_path,
-                self.name + "_" + self.video_process + "_proc_aud_vid.mp4",
+                self.name + "_" + self.video_process + "_combined.mp4",
             )
             ffmpeg_command.process_video_only_changes(
-                self.single_stream,
+                self.combined_stream,
                 self.video_stream,
-                temp_vid_aud_path,
+                temp_combined_stream_path,
                 self.start_time,
                 self.end_time,
                 self.speed_mult,
             )
 
             ffmpeg_command.process_audio_and_video(
-                self.single_stream,
+                self.combined_stream,
                 self.video_stream,
                 self.audio_stream,
-                temp_vid_aud_path,
+                temp_combined_stream_path,
                 self.start_time,
                 self.end_time,
                 self.speed_mult,
             )
 
-        self.apply_cover_photo(temp_vid_aud_path)
+        self.apply_cover_photo(temp_combined_stream_path)
 
     def apply_cover_photo(self, temp_vid_aud_path):
         with self.processing_lock:
@@ -603,7 +626,7 @@ class Video:
                 self.final_path,
             )
 
-    def clean_up(self):
+    def clean_up_temp_files(self):
         # delete temp files
         for a_file in self.temp_raw_files:
             try:
@@ -611,13 +634,13 @@ class Video:
             except Exception:
                 pass
 
-    def open(self):
+    def open_video_result(self):
         """open video file in default app - ie. vlc"""
         # TODO: DONT START UNTIL REENCODING COMPLETE
         with self.processing_lock:
             os.startfile(self.final_path)
 
-    def inform_complete(self):
+    def inform_of_process_completion(self):
         print(f"Finished with job: {self.final_path}")
         show_completed_msg(self.final_path)
 
@@ -633,6 +656,7 @@ def process_video(job):
 def video_job_scheduler() -> bool:
     """Retrieves video job details and sends them for processing"""
 
+    # Get job details from user
     new_job = Job()
 
     if new_job.stop_event:

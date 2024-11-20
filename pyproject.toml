@@ -9,6 +9,7 @@ dependencies = [
 	"coverage>=7.6.4",
 	"customtkinter>=5.2.2",
 	"jsonpickle>=3.3.0",
+	"objexplore>=1.6.3",
 	"pytest>=8.3.3",
 	"pytubefix>=8.1.1",
 ]

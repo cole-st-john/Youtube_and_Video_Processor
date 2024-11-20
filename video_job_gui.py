@@ -11,19 +11,17 @@ customtkinter.set_default_color_theme(
 )  # Themes: "blue" (standard), "green", "dark-blue"
 
 
-last_values_file_path = os.getcwd()
-YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
+# last_values_file_path = os.getcwd()
+# YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
 
 
-class VideoGui(customtkinter.CTk):
+class VideoJobGui(customtkinter.CTk):
     """
-    App
+    App for user entry of video job parameters
     """
 
     def __init__(self, job):
         super().__init__()
-        # self.geometry(f"{1100}x{580}")
-
         self.user_quit = False
         self.job = job
         self.raw_gui_video_params = self.job.raw_video_params
@@ -189,22 +187,16 @@ class VideoGui(customtkinter.CTk):
         self.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=1)
         self.create_set_shortcuts_elements()
 
+        # Bind function for upon closing app with x
+        self.protocol("WM_DELETE_WINDOW", self.upon_closing_gui)
+
     # Main GUI Elements ==========================================
     def create_set_shortcuts_elements(self):
-        # overall frame ===========================
+        """Create all of the GUI Elements"""
+
+        # overall gui frame ===========================
         self.inputs_frame = customtkinter.CTkFrame(self)
         self.inputs_frame.grid(**self.inputs_frame_dict)
-
-        # create tabview
-        # self.tabview = customtkinter.CTkTabview(self, width=250)
-        # self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        # self.tabview.add("Youtube Video")
-        # self.tabview.add("Local File")
-        # self.tabview.add("Last")
-        # self.tabview.tab("Youtube Video").grid_columnconfigure(
-        #     0, weight=1
-        # )  # configure grid of individual tabs
-        # self.tabview.tab("Local File").grid_columnconfigure(0, weight=1)
 
         # url
 
@@ -294,7 +286,7 @@ class VideoGui(customtkinter.CTk):
             # fg_color="green2",
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
-            command=self.enter_last_values,
+            command=self.enter_last_values,  # Command to be called if user wants last values
         )
         self.last_values_btn.grid(**self.last_values_btn_dict)
 
@@ -305,45 +297,46 @@ class VideoGui(customtkinter.CTk):
             # fg_color="green2",
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
-            command=self.confirm_entries,
+            command=self.gather_user_input_and_close,  # Command to be called if user confirms
         )
         self.entry_confirm_btn.grid(**self.entry_confirm_btn_dict)
 
     def enter_last_values(self):
-        # check for file
+        """Fetch last job values and populate to GUI"""
+
         # get last values
-        # if not any(self.raw_gui_video_params):
         self.job.retrieve_last_params_from_file()
         self.raw_gui_video_params = self.job.raw_video_params
         if not any(self.raw_gui_video_params):
             print("No last values found")
-            return
 
-        url = self.raw_gui_video_params["url"]
-        filepath = self.raw_gui_video_params["filepath"]
-        # name = self.raw_gui_video_params["name"]
-        start = self.raw_gui_video_params["start"]
-        end = self.raw_gui_video_params["end"]
-        cover = self.raw_gui_video_params["cover"]
-        speed = self.raw_gui_video_params["speed"]
+        else:
+            url = self.raw_gui_video_params["url"]
+            filepath = self.raw_gui_video_params["filepath"]
+            # name = self.raw_gui_video_params["name"]
+            start = self.raw_gui_video_params["start"]
+            end = self.raw_gui_video_params["end"]
+            cover = self.raw_gui_video_params["cover"]
+            speed = self.raw_gui_video_params["speed"]
 
-        # populate last values
-        self.url_textvar.set(url)
-        self.file_textvar.set(filepath)
-        # self.name_textvar.set(name)
-        if start and float(start):
-            self.start_var.set(start)
-        if end and float(end):
-            self.end_var.set(end)
-        if cover and float(cover):
-            self.cover_var.set(cover)
-        if speed and float(speed):
-            self.speed_var.set(speed)
+            # populate last values
+            self.url_textvar.set(url)
+            self.file_textvar.set(filepath)
+            # self.name_textvar.set(name)
+            if start and float(start):
+                self.start_var.set(start)
+            if end and float(end):
+                self.end_var.set(end)
+            if cover and float(cover):
+                self.cover_var.set(cover)
+            if speed and float(speed):
+                self.speed_var.set(speed)
 
-        # refresh gui
-        self.update()
+            # refresh gui
+            self.update()
 
-    def confirm_entries(self):
+    def gather_user_input_and_close(self):
+        """Extract user entered gui information for a video job"""
         self.raw_gui_video_params["url"] = self.url_entry.get()
         self.raw_gui_video_params["filepath"] = self.file_entry.get()
         self.raw_gui_video_params["name"] = self.name_entry.get()
@@ -352,15 +345,16 @@ class VideoGui(customtkinter.CTk):
         self.raw_gui_video_params["cover"] = self.cover_entry.get()
         self.raw_gui_video_params["speed"] = self.speed_entry.get()
 
+        # Close
         self.destroy()
 
-    def on_closing(self):
-        # global stop_event
-        self.user_quit = True
-        print("User Chose to Exit Gui")
-        self.destroy()
-
-    def get_user_input(self):
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+    def execute_gui(self):
+        """Run the gui and return the inputs"""
         self.mainloop()
         return self.user_quit, self.raw_gui_video_params
+
+    def upon_closing_gui(self):
+        """Action to be taken if user Xs out of gui"""
+        self.user_quit = True
+        print("User chose to exit GUI")
+        self.destroy()

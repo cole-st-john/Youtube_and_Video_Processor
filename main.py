@@ -2,13 +2,11 @@
 the download and processing of the video/audio happens asynchronously."""
 
 import media
-from configuration import config  # get config info
+from configuration import config  # get config info / early warning
 
 
 def video_downloader_and_processor() -> None:
     """Start video downloader and processor app"""
-    # Constants / Flags
-    continue_flag = True
 
     # Check whether there is a returned "end" flag, if not, continue
     end_flag = False
@@ -16,7 +14,7 @@ def video_downloader_and_processor() -> None:
         # create new video job (using gui) - block on the gui - but then allow async processing
         end_flag = media.video_job_scheduler()
 
-        # Check if the event is set (meaning user signaled to stop further videos)
+        # Check if the end flag is set (meaning user signaled to stop further videos)
         if end_flag:
             print("Ending Video app elegantly.")
 
