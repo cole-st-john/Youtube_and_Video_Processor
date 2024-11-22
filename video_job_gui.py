@@ -347,6 +347,7 @@ class VideoJobGui(customtkinter.CTk):
 
         # Close
         self.destroy()
+        print("Confirmed", flush=True)
 
     def execute_gui(self):
         """Run the gui and return the inputs"""
@@ -356,5 +357,6 @@ class VideoJobGui(customtkinter.CTk):
     def upon_closing_gui(self):
         """Action to be taken if user Xs out of gui"""
         self.user_quit = True
-        print("User chose to exit GUI")
+        print("User chose to exit GUI", flush=True)
         self.destroy()
+        print("Exiting", flush=True)

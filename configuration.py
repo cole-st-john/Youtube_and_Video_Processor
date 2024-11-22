@@ -4,6 +4,9 @@ import sys
 import os
 import jsonpickle
 from dataclasses import dataclass
+import platform
+
+app_platform = platform.platform().lower()
 
 
 class Config_Gui(customtkinter.CTk):
@@ -96,7 +99,10 @@ class Config_Gui(customtkinter.CTk):
         output_path = self.output_path_entry.get()
 
         # Compose values into config
-        self.config_info = Configuration_Info(output_path)
+        self.config_info = Configuration_Info(
+            output_path,
+            app_platform,
+        )
 
         # Signal close
         self.destroy()
@@ -114,6 +120,7 @@ class Config_Gui(customtkinter.CTk):
 @dataclass
 class Configuration_Info:
     output_path: str
+    platform: str
 
 
 class Configuration:
@@ -159,7 +166,11 @@ class Configuration:
                 self.config_info = jsonpickle.decode(
                     json_str, classes=Configuration_Info
                 )
+                # platform override
+                self.config_info.platform = app_platform
 
+        print(f"Output Path: {self.config_info.output_path}")
+        print(f"Platform: {self.config_info.platform}")
         return self.config_info
 
 

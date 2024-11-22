@@ -10,6 +10,7 @@ def video_downloader_and_processor() -> None:
 
     # Check whether there is a returned "end" flag, if not, continue
     end_flag = False
+
     while not end_flag:
         # create new video job (using gui) - block on the gui - but then allow async processing
         end_flag = media.video_job_scheduler()
@@ -25,3 +26,5 @@ if __name__ == "__main__":
 
     # Start app
     video_downloader_and_processor()
+
+    print("Finished")

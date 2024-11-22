@@ -17,7 +17,10 @@ YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json
 
 def show_completed_msg(video):
     """Let user know when a video job is complete"""
-    messagebox.showinfo(title="Video Tool", message=f"Video work on {video} complete.")
+    if "windows" in config.platform:
+        messagebox.showinfo(
+            title="Video Tool", message=f"Video work on {video} complete."
+        )
 
 
 class ffmpeg_command:
@@ -48,6 +51,7 @@ class ffmpeg_command:
         """Cover image extraction based on time input"""
         ffmpeg_pic_args = [
             "ffmpeg",
+            "-hide_banner",
             "-i",
             video_path,
             "-ss",
@@ -70,6 +74,7 @@ class ffmpeg_command:
                 # Cut =========================
                 ffmpeg_args = [
                     "ffmpeg",
+                    "-hide_banner",
                     "-ss",
                     start,
                 ]
@@ -129,6 +134,7 @@ class ffmpeg_command:
             # For video cutting ======================
             ffmpeg_args = [
                 "ffmpeg",
+                "-hide_banner",
                 "-ss",
                 start,
             ]
@@ -210,6 +216,7 @@ class ffmpeg_command:
             # ffmpeg -i rad.mp4 -i lofer.jpg -map 1 -map 0 -c copy -disposition:0 attached_pic out.mp4
             ffmpeg_args = [
                 "ffmpeg",
+                "-hide_banner",
             ]
 
             ffmpeg_args += [
@@ -638,11 +645,26 @@ class Video:
         """open video file in default app - ie. vlc"""
         # TODO: DONT START UNTIL REENCODING COMPLETE
         with self.processing_lock:
-            os.startfile(self.final_path)
+            if "windows" in config.platform:
+                os.startfile(self.final_path)
+            if "wsl" in config.platform:
+                try:
+                    subprocess.run(
+                        [
+                            "wsl-open",
+                            self.final_path,
+                        ],
+                        capture_output=True,
+                    )
+                except Exception as E:
+                    print(
+                        f"Was not able to automatically open output file: {self.final_path}"
+                    )
 
     def inform_of_process_completion(self):
-        print(f"Finished with job: {self.final_path}")
-        show_completed_msg(self.final_path)
+        with self.processing_lock:
+            print(f"Finished with job: {self.final_path}")
+            show_completed_msg(self.final_path)
 
 
 def instantiate_video(job):

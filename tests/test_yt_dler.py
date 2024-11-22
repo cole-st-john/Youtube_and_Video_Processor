@@ -88,10 +88,13 @@ class Test_Job:
         pass 
 
     def begin_process(self):
+        pass
     def process_inputs(self, raw_params: dict):
+        pass
     def retrieve_last_params_from_file(self):
+        pass
     def get_user_input_and_validate(self):
-
+        pass
 
 # class Video:
 #     def begin_process(self):
@@ -109,7 +112,7 @@ class Test_Job:
 
 # def instantiate_video(job):
 # def process_video(job):
-# def video_job_scheduler():
+def video_job_scheduler():
 
 
     """
@@ -141,4 +144,5 @@ class Test_Job:
     When: processing video
     Then: should use time in converted seconds
     """
-    
+
+    pass
