@@ -1,7 +1,6 @@
 import tkinter as tk
+
 import customtkinter
-import os
-import sys
 
 customtkinter.set_appearance_mode(
     "System"

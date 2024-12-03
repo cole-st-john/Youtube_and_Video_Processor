@@ -22,7 +22,7 @@ def video_downloader_and_processor() -> None:
 
 if __name__ == "__main__":
     # Check dependencies
-    media.ffmpeg_command.check_if_available()
+    media.Ffmpeg_Command.check_if_available()
 
     # Start app
     video_downloader_and_processor()

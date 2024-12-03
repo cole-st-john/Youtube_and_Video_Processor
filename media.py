@@ -1,15 +1,15 @@
-from tkinter import messagebox
-import subprocess
+import multiprocessing as mp
 import os
+import shutil
+import subprocess
+import sys
+from tkinter import messagebox
+
 from pytubefix import YouTube
 
 # from pytubefix import exceptions as pytubeexceptions
 import video_job_gui
-import multiprocessing as mp
-import sys
 from configuration import config
-import shutil
-
 
 last_values_file_path = config.output_path
 YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
@@ -23,7 +23,7 @@ def show_completed_msg(video):
         )
 
 
-class ffmpeg_command:
+class Ffmpeg_Command:
     """Composing and executing ffmpeg commands - enabling media processing"""
 
     # Resource: https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video
@@ -277,7 +277,7 @@ class Image:
         # ffmpeg -i "input.webm" -ss 00:00:01.000 -vframes 1  hallo.jpg
         """
 
-        ffmpeg_command.extract_cover_image(
+        Ffmpeg_Command.extract_cover_image(
             video_path, cover_time, self.cover_image_path
         )
 
@@ -461,7 +461,7 @@ class Video:
             self.video_stream = self.filepath
 
         self.extract_cover_photo_from_video()
-        self.peform_stream_composition()
+        self.perform_stream_composition()
         self.inform_of_process_completion()
         self.document_job_parameters()
         self.open_video_result()
@@ -597,13 +597,13 @@ class Video:
                 # Flag cover image for later deletion
                 self.temp_raw_files.append(self.cover_image_path)
 
-    def peform_stream_composition(self):
+    def perform_stream_composition(self):
         with self.processing_lock:
             temp_combined_stream_path = os.path.join(
                 config.output_path,
                 self.name + "_" + self.video_process + "_combined.mp4",
             )
-            ffmpeg_command.process_video_only_changes(
+            Ffmpeg_Command.process_video_only_changes(
                 self.combined_stream,
                 self.video_stream,
                 temp_combined_stream_path,
@@ -612,7 +612,7 @@ class Video:
                 self.speed_mult,
             )
 
-            ffmpeg_command.process_audio_and_video(
+            Ffmpeg_Command.process_audio_and_video(
                 self.combined_stream,
                 self.video_stream,
                 self.audio_stream,
@@ -626,7 +626,7 @@ class Video:
 
     def apply_cover_photo(self, temp_vid_aud_path):
         with self.processing_lock:
-            ffmpeg_command.add_image_to_video(
+            Ffmpeg_Command.add_image_to_video(
                 temp_vid_aud_path,
                 self.cover_time,
                 self.cover_image_path,
@@ -656,7 +656,7 @@ class Video:
                         ],
                         capture_output=True,
                     )
-                except Exception as E:
+                except Exception:
                     print(
                         f"Was not able to automatically open output file: {self.final_path}"
                     )

@@ -1,10 +1,11 @@
-import tkinter as tk
-import customtkinter
-import sys
 import os
-import jsonpickle
-from dataclasses import dataclass
 import platform
+import sys
+import tkinter as tk
+from dataclasses import dataclass
+
+import customtkinter
+import jsonpickle
 
 app_platform = platform.platform().lower()
 
