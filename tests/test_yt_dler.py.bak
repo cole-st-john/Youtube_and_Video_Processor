@@ -1,0 +1,231 @@
+import os
+import sys
+
+import main
+import media
+
+EXAMPLE_VIDEO_1 = "https://youtu.be/BsGjkkPKbsk"
+EXAMPLE_VIDEO_2 = "https://www.youtube.com/shorts/zthRM9pI6TQ"
+EXAMPLE_VIDEO_3 = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+
+# testing gui
+# testing dl functionality
+# testing composition functionality
+# testing
+
+# edge cases
+
+"""
+Given: File object
+When: given no basename or path
+Then: returns default graphml basename and working dir path
+"""
+
+
+# Integration Tests =====================================
+# main ====================
+class Test_Integration:
+    def test_does_it_work_for_simple_case_1(self):
+        main.video_downloader_and_processor()
+        assert 1 == 1
+
+
+# Unit Tests ============================================
+# configuration ====================
+class Test_Config_Gui:
+    pass
+
+
+class Test_Configuration:
+    pass
+
+
+# media ====================
+
+
+def test_show_completed_msg():
+    """
+    Given: nothing - base unit test
+    When: calling message box
+    Then: msg shows up
+    """
+    video_name = "ABC.mp4"
+    media.show_completed_msg(video_name)
+    assert 1 == 1  # assert made it this far
+
+
+class Test_Ffmpeg_Command:
+    def test_init(self):
+        pass
+
+    def test_check_if_available(self):
+        pass
+
+    def test_extract_cover_image(self):
+        pass
+
+    def test_process_video_only_changes(self):
+        pass
+
+    def test_process_audio_and_video(self):
+        pass
+
+    def test_add_image_to_video(self):
+        pass
+
+    def test_execute(self):
+        pass
+
+
+class Test_Image:
+    def test_init(self):
+        pass
+
+    def test_generate_cover_img_path(self):
+        pass
+
+    def test_generate_cover_image(self):
+        pass
+
+
+class Test_Job:
+    def test_init(self):
+        pass
+
+    def test_begin_process(self):
+        pass
+
+    def test_process_inputs(self):
+        pass
+
+    def test_retrieve_last_params_from_file(self):
+        pass
+
+    def test_validate_inputs(self):
+        pass
+
+    def test_get_user_input_and_validate(self):
+        pass
+
+
+class Test_Video:
+    def test_process_video(self):
+        pass
+
+    def test_retrieve_last_params_from_file(self):
+        pass
+
+    def test_document_job_parameters(self):
+        pass
+
+    def test_generate_video_path(self):
+        pass
+
+    def test_download_from_yt(self):
+        pass
+
+    def test_extract_cover_photo_from_video(self):
+        pass
+
+    def test_perform_stream_composition(self):
+        pass
+
+    def test_apply_cover_photo(self):
+        pass
+
+    def test_clean_up_temp_files(self):
+        pass
+
+    def test_open_video_result(self):
+        pass
+
+    def test_inform_of_process_completion(self):
+        pass
+
+
+def test_instantiate_video():
+    pass
+
+
+def test_process_video():
+    pass
+
+
+def test_video_job_scheduler():
+    """
+    Given: gui input data, including valid file path
+    When: processing video
+    Then: should process from filepath
+    """
+
+    """
+    Given: gui input data, including valid youtube url with high res streams
+    When: processing video
+    Then: should create video with vid/aud from url
+    """
+
+    """
+    Given: gui input data, including valid youtube url with only low-res combined mp4
+    When: processing video
+    Then: should skip audio/video comb stream 
+    """
+
+    """
+    Given: gui input data, with times in seconds
+    When: processing video
+    Then: should use time in seconds
+    """
+
+    """
+    Given: gui input data, with times in mm:ss(.s*)?
+    When: processing video
+    Then: should use time in converted seconds
+    """
+
+    pass
+
+
+# video_job_gui ====================
+class Test_VideoJobGui:
+    def test_init(self):
+        pass
+
+    def test_create_set_shortcuts_elements(self):
+        pass
+
+    def test_enter_last_values(self):
+        pass
+
+    def test_gather_user_input_and_close(self):
+        pass
+
+    def test_execute_gui(self):
+        pass
+
+    def test_upon_closing_gui(self):
+        pass
+
+
+class Test_File:
+    """Testing"""
+
+    def test_file_object_basics_1(self):
+        """
+        Given: File object
+        When: given no basename or path
+        Then: returns default graphml basename and working dir path
+        """
+        pass
+
+    #     test_file_obj = File()
+    #     assert isinstance(test_file_obj, File)
+    #     assert test_file_obj.basename == "temp.graphml"
+    #     assert test_file_obj.window_search_name == "temp.graphml - yEd"
+    #     assert test_file_obj.dir.lower() == os.getcwd().lower()
+
+
+# def check_whether_inputs_valid(url, filepath):
