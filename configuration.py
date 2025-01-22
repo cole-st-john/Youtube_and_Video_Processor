@@ -178,3 +178,4 @@ class Configuration:
 # Get configs
 print("Executing configuration....")
 config = Configuration().get_config_information()
+print("Finished Configuration")

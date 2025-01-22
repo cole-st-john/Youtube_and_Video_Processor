@@ -1,8 +1,24 @@
-"""This package / project enables manual input of youtube download jobs -
-the download and processing of the video/audio happens asynchronously."""
+"""
+This package / project enables
+- download of youtube videos,
+- simple modification of output length through clipping,
+- allows adding a cover image from somewhere in the video,
+- modification of video speed,
+and all through manual input in a desktop GUI -
+including asynchronous download and processing of the video/audio streams.
+"""
 
+# import pdb; pdb.set_trace()
 import media
+
 from configuration import config  # get config info / early warning
+import ffmpeg_tools
+
+# import os
+
+# envi = os.environ
+# print(envi)
+# patho = os.path
 
 
 def video_downloader_and_processor() -> None:
@@ -22,7 +38,7 @@ def video_downloader_and_processor() -> None:
 
 if __name__ == "__main__":
     # Check dependencies
-    media.Ffmpeg_Command.check_if_available()
+    ffmpeg_tools.Ffmpeg_Tools.check_if_ffpmeg_available()
 
     # Start app
     video_downloader_and_processor()
