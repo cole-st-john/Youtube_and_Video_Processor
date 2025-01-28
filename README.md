@@ -24,12 +24,6 @@ Using pip:
 pip install -r requirements.txt
 ```
 
-Or **Better**, using UV (Kudos to Astral and Team) - 
-
-```
-pip install uv 
-uv sync
-```
 
 ### Getting External Core Components
 
@@ -43,12 +37,10 @@ uv sync
 Downloading video from youtube: 
 
 ```Shell
-python main.py
+pip install .
+python .
 ```
-or 
-```Shell
-uv run main.py
-```
+
 Enter video details:
 
 ![Entering details in gui](https://raw.githubusercontent.com/cole-st-john/youtube_and_video_processor/master/images/example1.gif)

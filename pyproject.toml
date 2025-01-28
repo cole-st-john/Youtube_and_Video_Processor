@@ -5,9 +5,8 @@ description = "Just another youtube downloader - with GUI input of jobs, async p
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-	"coverage>=7.6.8",
 	"customtkinter>=5.2.2",
-	"jsonpickle>=4.0.0",
-	"pytest>=8.3.3",
-	"pytubefix>=8.6.0",
+	"jsonpickle>=4.0.1",
+	"pytubefix>=8.12.0",
 ]
+
