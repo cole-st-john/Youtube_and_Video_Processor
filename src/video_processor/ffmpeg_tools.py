@@ -1,3 +1,4 @@
+"""Wrapper for ffmpeg tools"""
 import subprocess
 import sys
 import shutil
@@ -235,8 +236,3 @@ class Ffmpeg_Tools:
         ffmpeg_args = [str(arg) for arg in ffmpeg_args]
         print(" ".join(ffmpeg_args))
         subprocess.run(ffmpeg_args)
-
-
-if __name__ == "__main__":
-    print("Testing...")
-    # Ffmpeg_Tools()

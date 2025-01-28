@@ -10,3 +10,18 @@ dependencies = [
 	"pytubefix>=8.12.0",
 ]
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# [tool.setuptools]
+# packages = ["video_processor"]
+# package-dir = { "" = "src" }
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []

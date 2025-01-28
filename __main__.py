@@ -1,0 +1,3 @@
+from video_processor.app import video_downloader_and_processor
+
+video_downloader_and_processor()
