@@ -14,7 +14,9 @@ packaging==24.2
 pluggy==1.5.0
 Pygments==2.19.1
 pytest==8.3.4
+pytest-env==1.1.5
 pytubefix==8.12.0
 rich==13.9.4
 six==1.17.0
 wcwidth==0.2.13
+-e git+https://github.com/cole-st-john/Youtube_and_Video_Processor.git@324ef156d26d854cea1d59ac1b873900756dc3f3#egg=youtube_and_video_processor
