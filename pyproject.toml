@@ -19,9 +19,13 @@ build-backend = "setuptools.build_meta"
 # package-dir = { "" = "src" }
 
 [tool.ruff]
-line-length = 120
+line-length = 150
 indent-width = 4
 target-version = "py312"
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []
+
+
+[tool.pytest.ini_options]
+env = ["TEST_MODE=1"]
