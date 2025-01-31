@@ -1,13 +1,12 @@
 import os
 import platform
+import subprocess
 import sys
 import tkinter as tk
 from dataclasses import dataclass
 
 import customtkinter
 import jsonpickle
-
-app_platform = platform.platform().lower()
 
 
 class Config_Gui(customtkinter.CTk):
@@ -102,7 +101,7 @@ class Config_Gui(customtkinter.CTk):
         # Compose values into config
         self.config_info = Configuration_Info(
             output_path,
-            app_platform,
+            platform.platform().lower(),
         )
 
         # Signal close
@@ -111,7 +110,7 @@ class Config_Gui(customtkinter.CTk):
     def on_closing(self):
         # global stop_event
         self.user_quit = True
-        print("User Chose to Exit Config Gui")
+        print("User chose to exit configuration gui.")
         sys.exit()
 
     def return_config_info(self):
@@ -124,14 +123,43 @@ class Configuration_Info:
     platform: str
 
 
+def check_app_dependencies():
+    """Check app dependencies"""
+
+    def check_if_ffpmeg_available():
+        try:
+            subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except FileNotFoundError:
+            print(
+                "Warning: FFMPEG is not installed or not available on the PATH.",
+                "Please install it from https://ffmpeg.org/download.html",
+                "& add to the PATH environmental variable.",
+            )
+            sys.exit()
+        else:
+            print("All dependencies found.")
+
+    check_if_ffpmeg_available()
+
+
 class Configuration:
     """Providing for user configuration of the app through gui and separate saving of configuration file"""
 
     def __init__(self):
+        check_app_dependencies()
+
         CONFIG_FILENAME = "video_process_config.ini"
         self.config_path = os.getcwd()
         self.config_fullpath = os.path.join(self.config_path, CONFIG_FILENAME)
         self.config_info: Configuration_Info
+        self.get_config_information()
+        self.LAST_VALUES_FULLPATH = os.path.join(self.config_info.output_path, "last_values.json")
+
+        self.GUI_APPEARANCE_MODE = "System"  # Modes: "System" (standard), "Dark", "Light"
+        self.GUI_COLOR_THEME = "blue"  # Themes: "blue" (standard), "green", "dark-blue"
+        # print("Test env: ", os.getenv("TEST_MODE"))
+        self.RUN_INTERACTIVE = os.getenv("TEST_MODE") != "1"
+        self.APP_NAME = "Video downloader and processor app"
 
     def prompt_user_for_config(self):
         self.config_info = Config_Gui().return_config_info()
@@ -166,14 +194,11 @@ class Configuration:
                 json_str = json_file.read()
                 self.config_info = jsonpickle.decode(json_str, classes=Configuration_Info)
                 # platform override
-                self.config_info.platform = app_platform
+                self.config_info.platform = platform.platform().lower()
 
-        print(f"Output Path: {self.config_info.output_path}")
-        print(f"Platform: {self.config_info.platform}")
-        return self.config_info
+        print(f"Configuration Output Path: {self.config_info.output_path}")
+        # print(f"Platform: {self.config_info.platform}")
+        # return self.config_info
 
 
-# Get configs
-print("Executing configuration....")
-config = Configuration().get_config_information()
-print("Finished Configuration")
+config = Configuration()

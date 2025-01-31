@@ -1,39 +1,133 @@
 import multiprocessing as mp
 import os
-import shutil
+
+# import shutil
 import subprocess
-import sys
+
+# import sys
 from tkinter import messagebox
-
-
-from video_processor import ffmpeg_tools
+from random import randint
 from pytubefix import YouTube
 
 # from pytubefix import exceptions as pytubeexceptions
+from video_processor.ffmpeg_tools import Ffmpeg_Tools
 from video_processor import video_job_gui
 from video_processor.configuration import config
 
-last_values_file_path = config.output_path
-YT_LAST_VALUES_FILE_PATH = os.path.join(last_values_file_path, "last_values.json")
+
+class YoutubeURLError(Exception):
+    pass
 
 
-def inform_complete_and_query_open(video):
-    """Let user know when a video job is complete"""
-    msg_return_code = None
-    if "windows" in config.platform:
-        msg_return_code = messagebox.askyesno(
+def open_video_dialog(video_name):
+    """If running app interactively, ask user whether the video product should be opened -> returns bool."""
+    msg_box_yes_no = None
+    print("See message_box to open video ===========")
+    if "windows" in config.config_info.platform:
+        msg_box_yes_no = messagebox.askyesno(
             title="Video Tool",
-            message=f"Video work on {video} complete.\n\nOpen video product?",
+            message=f"Video work on {video_name} complete.\n\nOpen video product?",
         )
 
-    return msg_return_code
+    return msg_box_yes_no
+
+
+def sync_wrapper(func):
+    """impose synchronous lock during the wrapped 'work'"""
+
+    def sync_arg_wrapper(self, *args, **kwargs):
+        with self.processing_lock:
+            return func(self, *args, **kwargs)
+
+    return sync_arg_wrapper
+
+
+# def yt_parse_url(url):
+#     # https://www.youtube.com/watch?v=RVmq1tFerRc
+#     # https://www.youtube.com/watch?v=KKYB59JZ4-4
+#     # https://youtu.be/KKYB59JZ4-4?si=jXTKdXyiVA32v5yy
+#     # https://youtu.be/KKYB59JZ4-4
+
+#     # playlist
+#     # https://www.youtube.com/watch?v=5XDld3npn0o&list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf
+
+#     # time
+#     # https://youtu.be/5XDld3npn0o?si=JUyC5K59_0_uyliL&t=14
+
+#     # short or long
+#     #   tps://youtube.com/shorts/IzLD1t4SrUE?si=1hpk-YE5gDz1jjm4 (share ending)
+
+#     pass
+
+
+def yt_is_valid_url(url):
+    if not url:
+        return False
+    try:
+        YouTube(url, "WEB").check_availability()
+        return True
+    except Exception:
+        return False
+
+
+def yt_get_streams(url):
+    """return all stream for a youtube url"""
+    return YouTube(url=url, client="WEB").streams
+
+
+def yt_filter_video_streams(streams):
+    return streams.filter(type="video")
+
+
+def yt_filter_highest_quality_video_stream(video_streams):
+    return video_streams.order_by("bitrate").desc().first()
+
+
+def yt_video_stream_includes_audio(video_stream):
+    return video_stream.includes_audio_track
+
+
+# def yt_audio_available(streams):
+#     return bool(yt_filter_highest_quality_audio_streams(streams))
+
+
+def yt_filter_highest_quality_audio_stream(streams):
+    return streams.filter(type="audio").order_by("bitrate").desc().first()
+
+
+def gen_name(name=None):
+    """Generates random digit set"""
+    if not name:
+        name = "".join([str(randint(0, 9)) for _ in range(6)])
+    return name
+
+
+def yt_gen_name_suffix(media_type):
+    if media_type == "video":
+        return "temp_video"
+    else:  # type==Video or None
+        return "temp_audio"
+
+
+def yt_gen_temp_name(name, type=None):
+    type = type or "video"  # enum: audio, video
+    return name + "_" + yt_gen_name_suffix(type) + ".mp4"
+
+
+def yt_download_stream(stream, path, name):
+    print(f"Downloading {stream.title}:{name}")
+    return stream.download(path, filename=name)
+
+
+# def yt_filter_highest_quality_audio_stream(audio_streams):
+#     return audio_streams.order_by("bitrate").desc().first()
 
 
 class Image:
     """Object carrying common cover image information/methods"""
 
     def __init__(self, video_path, cover_time):
-        self.path = config.output_path
+        self.path = config.config_info.output_path
         self.name = "cover_pic"
         self.ext = ".jpg"
         self.cover_image_path = self.generate_cover_img_path()
@@ -50,7 +144,7 @@ class Image:
         # ffmpeg -i "input.webm" -ss 00:00:01.000 -vframes 1  hallo.jpg
         """
 
-        ffmpeg_tools.Ffmpeg_Tools.extract_cover_image(video_path, cover_time, self.cover_image_path)
+        Ffmpeg_Tools.extract_cover_image(video_path, cover_time, self.cover_image_path)
 
         return self.cover_image_path
 
@@ -63,19 +157,22 @@ class Job:
         self.raw_video_params: dict = dict()
 
         # processed video params
-        self.stop_event = True
+        self.stop_event = False
+
+        # string entries
         self.url: str = ""
         self.filepath: str = ""
         self.name: str = ""
-        self.start_time: float | None
-        self.end_time: float | None
-        self.cover_time: float | None
-        self.speed_mult: float | None
+
+        # float entries
+        self.start_time: float | None = None
+        self.end_time: float | None = None
+        self.cover_time: float | None = None
+        self.speed_mult: float | None = None
+
         self.combined_stream = False
         self.valid_inputs = True
-
-        # Process
-        self.get_user_input_and_validate()
+        self.processed_output_path: str = ""
 
     def process_user_inputs(self, raw_job_params: dict):
         """Perform processing of raw gui-input parameters to correctly use or document them"""
@@ -132,7 +229,7 @@ class Job:
         raw_params = list()
         try:
             # Read previous file params from file
-            with open(YT_LAST_VALUES_FILE_PATH) as file:
+            with open(config.LAST_VALUES_FULLPATH) as file:
                 raw_params = [str(line).strip() for line in file]
 
                 def transform_nulls(x):
@@ -172,87 +269,16 @@ class Job:
                 message="Invalid input for Video URL or Filepath.",
             )
 
-    def get_user_input_and_validate(self):
+    def get_input(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
         self.retrieve_last_params_from_file()
         self.stop_event, raw_video_params = video_job_gui.VideoJobGui(self).execute_gui()
         if self.stop_event:
-            return
+            return self
         self.process_user_inputs(raw_video_params)
         self.validate_inputs()
 
-
-class Video_Processor:
-    """Object owning video processing methods"""
-
-    def __init__(self, job):
-        self.video_process = str(os.getpid())
-        self.processing_lock = mp.Lock()
-
-        # initialize
-        self.raw_video_params: dict = dict()
-
-        # processed video params
-        self.url: str = ""
-        self.filepath: str = ""
-        self.name: str = ""
-        self.start_time: float | None
-        self.end_time: float | None
-        self.cover_time: float | None
-        self.speed_mult: float | None
-        self.combined_stream: bool
-
-        # transfer properties?
-        for key, value in job.__dict__.items():
-            if key not in ("__name__",):
-                setattr(self, key, value)
-
-        # video processing related
-        self.cover_image_path: str = ""
-        self.video_stream: str | None = ""
-        self.audio_stream: str | None = ""
-        self.temp_raw_files = list()
-
-        # Initiate Video Processing
-        self.process_video()
-
-    def process_video(self):
-        # Ensure there is a path for final output
-        self.final_path = self.generate_video_path()
-
-        # Triage for whether yt download is required
-        if self.url:
-            self.download_from_yt()
-        else:
-            self.video_stream = self.filepath
-
-        self.extract_cover_photo_from_video()
-        self.perform_stream_composition()
-        open_video_code = self.inform_of_process_completion()
-
-        self.document_job_parameters()
-        if open_video_code:
-            self.open_video_result()
-        self.clean_up_temp_files()
-
-    def retrieve_last_params_from_file(self):
-        """Pull previous video job parameters from a file - if there - to hand off to GUI"""
-        raw_video_job_params = list()
-        try:
-            with open(YT_LAST_VALUES_FILE_PATH) as file:
-                raw_video_job_params = [str(line.strip()) if not "None" else "" for line in file]
-        except FileNotFoundError:
-            return 0
-        else:
-            self.raw_video_params["url"] = raw_video_job_params.pop(0)
-            self.raw_video_params["filepath"] = raw_video_job_params.pop(0)
-            self.raw_video_params["name"] = raw_video_job_params.pop(0)
-            self.raw_video_params["start"] = raw_video_job_params.pop(0)
-            self.raw_video_params["end"] = raw_video_job_params.pop(0)
-            self.raw_video_params["cover"] = raw_video_job_params.pop(0)
-            self.raw_video_params["speed"] = raw_video_job_params.pop(0)
-
-            return 1
+        return self  # return the processed Job instance
 
     def document_job_parameters(self):
         """Document previous video job parameters to use in GUI next use - if desired by user."""
@@ -262,10 +288,10 @@ class Video_Processor:
         if self.filepath:
             pass
         else:
-            self.filepath = self.final_path
+            self.filepath = self.processed_output_path
 
         # Overwrite/create file contents with new parameters
-        with open(YT_LAST_VALUES_FILE_PATH, "w") as file:
+        with open(config.LAST_VALUES_FULLPATH, "w") as file:
             value_string = "\n".join(
                 [
                     str(x)
@@ -280,20 +306,137 @@ class Video_Processor:
                     ]
                 ]
             )
-            print(value_string)
+            # print(value_string)
             file.write(value_string)
 
-    def generate_video_path(self):
-        """Generates name and path - random name if no name & generates path"""
-        # Generate a name if needed
-        if not self.name:
-            from random import randint
 
-            self.name = "".join([str(randint(0, 9)) for _ in range(4)])
+class Video_Processor:
+    """Object owning video processing methods"""
+
+    def __init__(self, job):
+        # initialize
+        # self.raw_video_params: dict = dict()
+        self.job = job
+
+        # Enablers of async job processing
+        self.video_process = str(os.getpid())
+        self.processing_lock = mp.Lock()
+
+        # processed video params
+        # self.url: str = ""
+        # self.filepath: str = ""
+        # self.name: str = ""
+        # self.start_time: float | None
+        # self.end_time: float | None
+        # self.cover_time: float | None
+        # self.speed_mult: float | None
+
+        # video processing related
+        self.is_youtube_job = bool(job.url)
+        self.combined_stream: bool
+        self.includes_video: bool
+        self.includes_audio: bool
+        self.multiple_streams: bool
+        self.cover_image_path: str = ""
+        self.local_video_stream: str | None = ""
+        self.local_audio_stream: str | None = ""
+        self.temp_raw_files = list()
+
+        # modifying job
+        self.output_dir = config.config_info.output_path
+        self.job.name = gen_name(job.name)
+        self.temp_combined_stream_path = os.path.join(
+            self.output_dir,
+            self.job.name + "_combined.mp4",
+        )
+        self.job.processed_output_path = self.generate_video_path()
+
+    def job_runnable(self):
+        return bool(self.job.valid_inputs)
+
+    def return_success_flag(self):
+        # TODO: ADD FFMPEG CHECK FOR USABLE MEDIA?
+        if os.path.isfile(self.job.processed_output_path):
+            return True
+        else:
+            return False
+
+    def process_video_only(self):
+        Ffmpeg_Tools.process_video_only_changes(
+            self.local_video_stream,
+            self.temp_combined_stream_path,
+            self.job.start_time,
+            self.job.end_time,
+            self.job.speed_mult,
+        )
+
+    def combine_and_process_streams(self):
+        Ffmpeg_Tools.process_audio_and_video(
+            self.local_video_stream,
+            self.local_audio_stream,
+            self.temp_combined_stream_path,
+            self.job.start_time,
+            self.job.end_time,
+            self.job.speed_mult,
+        )
+
+    def process_yt_job(self):
+        self.download_from_yt()
+        self.extract_cover_photo_from_video()
+        if self.local_audio_stream and self.local_video_stream:
+            self.combine_and_process_streams()
+        else:
+            self.process_video_only()
+
+    def process_local_job(self):
+        self.local_video_stream = self.job.filepath  # FIXME: HACK FOR PATHINIG
+        self.extract_cover_photo_from_video()
+        self.process_video_only()
+
+    def wrap_up_job(self):
+        self.job.document_job_parameters()
+
+        if config.RUN_INTERACTIVE and open_video_dialog(self.job.processed_output_path):
+            self.open_video_result()
+
+        self.clean_up_temp_files()
+
+    def process_job(self):
+        # Triage for whether yt download is required
+
+        if self.is_youtube_job:
+            self.process_yt_job()
+        else:
+            self.process_local_job()
+
+        self.apply_cover_photo(self.temp_combined_stream_path)
+
+        # self.perform_stream_composition()
+
+        self.wrap_up_job()
+
+        return self.return_success_flag(), self.job.processed_output_path
+
+    def process_job_async(self) -> None:
+        """Async processing of video processing jobs"""
+        if self.job_runnable:
+            job_to_process = mp.Process(target=self.process_job)
+            job_to_process.start()
+
+    def process_job_sync(self) -> bool:
+        """Async processing of video processing jobs"""
+        if self.job_runnable:
+            success_flag, _ = self.process_job()
+            return success_flag
+        return False
+
+    def generate_video_path(self):
+        """Generates path - random name if no name & generates path"""
 
         # Assemble and return a full path
-        return os.path.join(config.output_path, self.name + ".mp4")
+        return os.path.join(self.output_dir, self.job.name + ".mp4")
 
+    @sync_wrapper
     def download_from_yt(self):
         """If yt video,
         download it (it's stream(s)).
@@ -303,104 +446,41 @@ class Video_Processor:
         can have multiple file format output
         """
 
-        # Early return if no youtube url to be downloaded
-        if not self.url:
-            return
+        # Check that its actually available
+        if not yt_is_valid_url(self.job.url):
+            raise YoutubeURLError(f"URL seems to be bad / unavailable {self.job.url}")
 
-        with self.processing_lock:
-            yt_video_obj = YouTube(url=self.url, client="WEB")
+        # Fetch youtube streams
+        streams = yt_get_streams(self.job.url)
 
-            # get highest res video / and audio
-            streams = yt_video_obj.streams
+        # Select and download video
+        yt_video_stream = yt_filter_highest_quality_video_stream(streams)
+        # print(f"Downloading Video: {yt_video_stream.title}")
+        self.local_video_stream = yt_download_stream(yt_video_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="video"))
+        self.temp_raw_files.append(self.local_video_stream)
 
-            # Get high res version
-            stream = streams.filter(type="video").order_by("bitrate").desc().first()
+        # if audio only available seperately in high quality - select and download audio
+        if not yt_video_stream_includes_audio(yt_video_stream):
+            yt_audio_stream = yt_filter_highest_quality_audio_stream(streams)
+            self.local_audio_stream = yt_download_stream(yt_audio_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="audio"))
+            self.temp_raw_files.append(self.local_audio_stream)
 
-            # Do we need to also look for separate audio stream
-            combined_stream = stream.includes_audio_track
-
-            # Generate a temp stream name
-            temp_file_name = "temp_video" + "_" + self.video_process
-            print(f"Downloading Video: {yt_video_obj.title}")
-
-            # Download the stream
-            self.video_stream = stream.download(config.output_path, filename=temp_file_name)
-
-            # Inform complete
-            print(f"Finished dl: {self.video_stream}")
-
-            # Flag for later deletion / clean up
-            self.temp_raw_files.append(self.video_stream)
-
-            # Recording audio stream if there is separate audio stream as part of high res pairing
-            if not combined_stream:
-                # Generate temp stream name
-                temp_file_name = "temp_audio" + "_" + self.video_process
-
-                # Get available streams
-                streams = yt_video_obj.streams
-
-                # Download stream - highest res
-                print("Downloading audio")
-                self.audio_stream = (
-                    streams.filter(type="audio")
-                    .order_by("bitrate")
-                    .desc()
-                    .first()
-                    .download(config.output_path, filename=temp_file_name)
-                )
-                print(f"Finished dl: {self.audio_stream}")
-
-                # Flag for later completion
-                self.temp_raw_files.append(self.audio_stream)
-
-                # Ensure this flag is correct (edge case - no audio available and no audio included in vid)
-                self.combined_stream = not self.audio_stream
-
+    @sync_wrapper
     def extract_cover_photo_from_video(self):
         """Extract cover photo from video file"""
-        if self.cover_time:
-            with self.processing_lock:
-                self.cover_image_path = Image(self.video_stream, self.cover_time).cover_image_path
+        if self.job.cover_time:
+            self.cover_image_path = Image(self.local_video_stream, self.job.cover_time).cover_image_path
 
-                # Flag cover image for later deletion
-                self.temp_raw_files.append(self.cover_image_path)
-
-    def perform_stream_composition(self):
-        with self.processing_lock:
-            temp_combined_stream_path = os.path.join(
-                config.output_path,
-                self.name + "_" + self.video_process + "_combined.mp4",
-            )
-            ffmpeg_tools.Ffmpeg_Tools.process_video_only_changes(
-                self.combined_stream,
-                self.video_stream,
-                temp_combined_stream_path,
-                self.start_time,
-                self.end_time,
-                self.speed_mult,
-            )
-
-            ffmpeg_tools.Ffmpeg_Tools.process_audio_and_video(
-                self.combined_stream,
-                self.video_stream,
-                self.audio_stream,
-                temp_combined_stream_path,
-                self.start_time,
-                self.end_time,
-                self.speed_mult,
-            )
-
-        self.apply_cover_photo(temp_combined_stream_path)
+            # Flag cover image for later deletion
+            self.temp_raw_files.append(self.cover_image_path)
 
     def apply_cover_photo(self, temp_vid_aud_path):
-        with self.processing_lock:
-            ffmpeg_tools.Ffmpeg_Tools.add_image_to_video(
-                temp_vid_aud_path,
-                self.cover_time,
-                self.cover_image_path,
-                self.final_path,
-            )
+        Ffmpeg_Tools.add_image_to_video(
+            temp_vid_aud_path,
+            self.job.cover_time,
+            self.cover_image_path,
+            self.job.processed_output_path,
+        )
 
     def clean_up_temp_files(self):
         """delete temp files"""
@@ -410,50 +490,52 @@ class Video_Processor:
             except Exception:
                 pass
 
+    @sync_wrapper
     def open_video_result(self):
         """open video file in default app - ie. vlc"""
         # TODO: DONT START UNTIL REENCODING COMPLETE
-        with self.processing_lock:
-            if "windows" in config.platform:
-                os.startfile(self.final_path)
-            if "wsl" in config.platform:
-                try:
-                    subprocess.run(
-                        [
-                            "wsl-open",
-                            self.final_path,
-                        ],
-                        capture_output=True,
-                    )
-                except Exception:
-                    print(f"Was not able to automatically open output file: {self.final_path}")
 
-    def inform_of_process_completion(self):
-        with self.processing_lock:
-            print(f"Finished with job: {self.final_path}")
-            return inform_complete_and_query_open(self.final_path)
+        if "windows" in config.config_info.platform:
+            os.startfile(self.job.processed_output_path)
+        if "wsl" in config.config_info.platform:
+            try:
+                subprocess.run(
+                    [
+                        "wsl-open",
+                        self.job.processed_output_path,
+                    ],
+                    capture_output=True,
+                )
+            except Exception:
+                print(f"Was not able to automatically open output file: {self.job.processed_output_path}")
 
 
-def video_job_scheduler() -> bool:
-    """
-    Retrieves video job details and sends them for processing.
+def video_downloader_and_processor(end_flag=False):
+    """Execute video downloader and processor app"""
 
-    Returns bool for whether User cancelled out of process.
-    """
+    print(f"Starting {config.APP_NAME}", "=" * 10)
 
-    # Check dependencies
-    ffmpeg_tools.Ffmpeg_Tools.check_if_ffpmeg_available()
+    # Check if the end flag is set (meaning user signaled to stop further videos)
+    while not end_flag:
+        # create new video job (using gui) - block on the gui - but then allow async processing
 
-    # Get job details from user
-    new_job = Job()
+        # Instantiate new job and get user input
+        new_job = Job().get_input()
 
-    # Return a flag that the user cancelled out
-    if new_job.stop_event:
-        return True
+        # update end_flag
+        end_flag = new_job.stop_event
 
-    # Otherwise put in a process queue
-    if new_job.valid_inputs:
-        job_to_process = mp.Process(target=Video_Processor, args=(new_job,))
-        job_to_process.start()
+        if end_flag:
+            break
 
-    return False
+        # Process Job
+        try:
+            Video_Processor(new_job).process_job_async()
+            # Video_Processor(new_job).process_job_sync()  # for debugging
+        except Exception as e:
+            print(f"Error in dl of {new_job} - error: {e}")
+            # pass  # FIXME:
+
+    print(f"Closing {config.APP_NAME}.", "=" * 10)
+
+    # TODO: IS THERE IS A PROBLEM IF AN ASYNC PROCESS IS WORKING WHEN IT GETS HERE ?

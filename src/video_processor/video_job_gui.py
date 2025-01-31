@@ -1,12 +1,11 @@
-import tkinter as tk
+from tkinter import StringVar
+
 import customtkinter
 
-customtkinter.set_appearance_mode(
-    "System"
-)  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme(
-    "blue"
-)  # Themes: "blue" (standard), "green", "dark-blue"
+from video_processor.configuration import config
+
+customtkinter.set_appearance_mode(config.GUI_APPEARANCE_MODE)
+customtkinter.set_default_color_theme(config.GUI_COLOR_THEME)
 
 
 class VideoJobGui(customtkinter.CTk):
@@ -197,7 +196,7 @@ class VideoJobGui(customtkinter.CTk):
         self.url_label = customtkinter.CTkLabel(self.inputs_frame, text="Youtube URL:")
         self.url_label.grid(**self.url_label_dict)
 
-        self.url_textvar = tk.StringVar()
+        self.url_textvar = StringVar()
         self.url_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Youtube URL",
@@ -206,12 +205,10 @@ class VideoJobGui(customtkinter.CTk):
         self.url_entry.grid(**self.url_entry_dict)
 
         # File
-        self.filepath_label = customtkinter.CTkLabel(
-            self.inputs_frame, text="Filepath:"
-        )
+        self.filepath_label = customtkinter.CTkLabel(self.inputs_frame, text="Filepath:")
         self.filepath_label.grid(**self.filepath_label_dict)
 
-        self.file_textvar = tk.StringVar()
+        self.file_textvar = StringVar()
         self.file_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Video Filepath",
@@ -223,7 +220,7 @@ class VideoJobGui(customtkinter.CTk):
         self.name_label = customtkinter.CTkLabel(self.inputs_frame, text="Name:")
         self.name_label.grid(**self.name_label_dict)
 
-        self.name_textvar = tk.StringVar()
+        self.name_textvar = StringVar()
         self.name_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Name",
@@ -234,7 +231,7 @@ class VideoJobGui(customtkinter.CTk):
         # Start Time
         self.start_label = customtkinter.CTkLabel(self.inputs_frame, text="Start Time:")
         self.start_label.grid(**self.start_label_dict)
-        self.start_var = tk.StringVar()
+        self.start_var = StringVar()
         self.start_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Start Time",
@@ -245,7 +242,7 @@ class VideoJobGui(customtkinter.CTk):
         # End Time
         self.end_label = customtkinter.CTkLabel(self.inputs_frame, text="End Time:")
         self.end_label.grid(**self.end_label_dict)
-        self.end_var = tk.StringVar()
+        self.end_var = StringVar()
         self.end_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="End Time",
@@ -254,11 +251,9 @@ class VideoJobGui(customtkinter.CTk):
         self.end_entry.grid(**self.end_entry_dict)
 
         # Cover photo time
-        self.cover_label = customtkinter.CTkLabel(
-            self.inputs_frame, text="Cover Photo Time:"
-        )
+        self.cover_label = customtkinter.CTkLabel(self.inputs_frame, text="Cover Photo Time:")
         self.cover_label.grid(**self.cover_label_dict)
-        self.cover_var = tk.StringVar()
+        self.cover_var = StringVar()
         self.cover_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Cover Photo Time",
@@ -269,7 +264,7 @@ class VideoJobGui(customtkinter.CTk):
         # Speed
         self.speed_label = customtkinter.CTkLabel(self.inputs_frame, text="Speed")
         self.speed_label.grid(**self.speed_label_dict)
-        self.speed_var = tk.StringVar()
+        self.speed_var = StringVar()
         self.speed_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="1x (no x needed)",
@@ -344,17 +339,29 @@ class VideoJobGui(customtkinter.CTk):
         self.raw_gui_video_params["speed"] = self.speed_entry.get()
 
         # Close
-        self.destroy()
+        self.withdraw()
+        self.quit()
+
         print("Confirmed", flush=True)
 
     def execute_gui(self):
         """Run the gui and return the inputs"""
         self.mainloop()
+        # self.quit()
         return self.user_quit, self.raw_gui_video_params
 
     def upon_closing_gui(self):
         """Action to be taken if user Xs out of gui"""
         self.user_quit = True
-        print("User chose to exit GUI", flush=True)
-        self.destroy()
+        # print("User chose to exit GUI", flush=True)
+        print("User exited GUI")
+        self.withdraw()
+        self.quit()
+
         print("Exiting", flush=True)
+
+
+if __name__ == "__main__":
+    from video_processor.media import Job
+
+    VideoJobGui(Job()).execute_gui()

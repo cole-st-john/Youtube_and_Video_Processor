@@ -1,7 +1,4 @@
-# from . import configuration
-# from . import ffmpeg_tools
-# from . import media
-# from . import video_job_gui
+import video_processor.configuration  # set configuration at beginning - first import
+from rich import print
 
-
-# print(f"Finished initializing {__file__}")
+print("'Video Processor' package initializing and configuring")
