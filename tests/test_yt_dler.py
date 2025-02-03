@@ -36,11 +36,11 @@ EXAMPLE_VIDEO_W_SHARE_AND_TIME = "https://youtu.be/5XDld3npn0o?si=JUyC5K59_0_uyl
 EXAMPLE_VIDEO_W_SHARE = "https://youtube.com/shorts/IzLD1t4SrUE?si=1hpk-YE5gDz1jjm4 "
 SHORT_VIDEO_1 = "https://www.youtube.com/shorts/zthRM9pI6TQ"
 SHORT_VIDEO_2 = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-VIDEO_IN_PLAYLIST_1 = "https://www.youtube.com/watch?v=5XDld3npn0o&list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf"
+VIDEO_IN_PLAYLIST_1 = "https://www.youtube.com/watch?v=1e5841fW53Q&list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf&index=14"
 PLAYLIST = "https://www.youtube.com/playlist?list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf"
 INVALID_VIDEO = "https://www.youtube.com/shorts/AFDFSSSDFF4GG444"
 LOW_QUALITY_VIDEO = "https://www.youtube.com/watch?v=o7hX2JGiwW4"
-ULTRA_HD_VIDEO = "https://www.youtube.com/watch?v=K6LN-3eVNFM"
+ULTRA_HD_VIDEO = "https://www.youtube.com/watch?v=R3GfuzLMPkA"
 
 LOCAL_VIDEO_VALID = os.path.join(TEST_DIR, "test_resources", "video_1.mp4")
 LOCAL_VIDEO_INVALID = os.path.join(TEST_DIR, "test_resources", "video_not_existing.mp4")
