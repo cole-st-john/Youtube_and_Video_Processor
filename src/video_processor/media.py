@@ -5,7 +5,8 @@ import os
 import subprocess
 
 # import sys
-from tkinter import messagebox
+import tkinter as tk
+from tkinter import messagebox as msg
 from random import randint
 from pytubefix import YouTube
 
@@ -22,12 +23,25 @@ class YoutubeURLError(Exception):
 def open_video_dialog(video_name):
     """If running app interactively, ask user whether the video product should be opened -> returns bool."""
     msg_box_yes_no = None
+
+    # some root tk window
+    root = tk.Tk()
+    root.withdraw()
     print("See message_box to open video ===========")
-    if "windows" in config.config_info.platform:
-        msg_box_yes_no = messagebox.askyesno(
+    if root._windowingsystem == "win32":
+        # windows showerror
+        top = tk.Toplevel(root)
+        top.iconify()
+        msg_box_yes_no = msg.askyesno(title="Video Tool", message=f"Video work on {video_name} complete.\n\nOpen video product?", parent=top)
+        top.destroy()
+    else:
+        # non-windows showerror
+        msg_box_yes_no = msg.askyesno(
             title="Video Tool",
             message=f"Video work on {video_name} complete.\n\nOpen video product?",
         )
+
+    root.destroy()
 
     return msg_box_yes_no
 
@@ -264,7 +278,7 @@ class Job:
 
         if not self.valid_inputs:
             print("Error - No valid URL or filepath given.")
-            messagebox.showerror(
+            msg.showerror(
                 title="Video Input Error",
                 message="Invalid input for Video URL or Filepath.",
             )
