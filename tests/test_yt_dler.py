@@ -32,13 +32,16 @@ check_dependencies(dependencies)
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
 EXAMPLE_VIDEO_1 = "https://youtu.be/BsGjkkPKbsk"
+EXAMPLE_VIDEO_W_SHARE_AND_TIME = "https://youtu.be/5XDld3npn0o?si=JUyC5K59_0_uyliL&t=14"
+EXAMPLE_VIDEO_W_SHARE = "https://youtube.com/shorts/IzLD1t4SrUE?si=1hpk-YE5gDz1jjm4 "
 SHORT_VIDEO_1 = "https://www.youtube.com/shorts/zthRM9pI6TQ"
 SHORT_VIDEO_2 = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-VIDEO_IN_PLAYLIST_1 = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-PLAYLIST = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-INVALID_VIDEO = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-LOW_QUALITY_VIDEO = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
-ULTRA_HD_VIDEO = "https://www.youtube.com/shorts/o5Q7GShNo3Q"
+VIDEO_IN_PLAYLIST_1 = "https://www.youtube.com/watch?v=5XDld3npn0o&list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf"
+PLAYLIST = "https://www.youtube.com/playlist?list=PLov10-5x6sFFk3pBv6EMudwIZJXaEpGXf"
+INVALID_VIDEO = "https://www.youtube.com/shorts/AFDFSSSDFF4GG444"
+LOW_QUALITY_VIDEO = "https://www.youtube.com/watch?v=o7hX2JGiwW4"
+ULTRA_HD_VIDEO = "https://www.youtube.com/watch?v=K6LN-3eVNFM"
+
 LOCAL_VIDEO_VALID = os.path.join(TEST_DIR, "test_resources", "video_1.mp4")
 LOCAL_VIDEO_INVALID = os.path.join(TEST_DIR, "test_resources", "video_not_existing.mp4")
 
@@ -75,28 +78,105 @@ class Test_Config_Gui:
 class Test_Job_Processing:
     def test_job_processing_1(self):
         new_job = media.Job()
-        new_job.url = "https://www.youtube.com/shorts/zthRM9pI6TQ"
-        # new_job.name = "async1"
+        new_job.url = SHORT_VIDEO_1
         new_job.name = f"{sys._getframe().f_code.co_name}"
         new_job.stop_event = False
-        media.process_job_async(new_job)
+        media.Video_Processor(new_job).process_job_async()
         assert 1 == 1
 
     def test_job_processing_2(self):
         new_job = media.Job()
-        new_job.url = "https://www.youtube.com/shorts/zthRM9pI6TQ"
+        new_job.url = SHORT_VIDEO_1
         new_job.name = f"{sys._getframe().f_code.co_name}"
         new_job.stop_event = False
-        success_flag = media.process_job_sync(new_job)
-        assert success_flag is True
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
 
     def test_job_processing_3(self):
         new_job = media.Job()
-        new_job.url = "https://www.youtube.com/shorts/zthRM9pI6TQ"
+        new_job.url = SHORT_VIDEO_2
         new_job.name = f"{sys._getframe().f_code.co_name}"
         new_job.start_time = 1
         new_job.end_time = 2
         new_job.cover_time = 0
         new_job.speed_mult = 0.5
-        success_flag = media.process_job_sync(new_job)
-        assert success_flag is True
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_4(self):
+        new_job = media.Job()
+        new_job.url = EXAMPLE_VIDEO_1
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_5(self):
+        new_job = media.Job()
+        new_job.url = EXAMPLE_VIDEO_W_SHARE_AND_TIME
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_6(self):
+        new_job = media.Job()
+        new_job.url = EXAMPLE_VIDEO_W_SHARE
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_7(self):
+        new_job = media.Job()
+        new_job.url = VIDEO_IN_PLAYLIST_1
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_8(self):
+        with pytest.raises(media.YoutubeURLError):
+            new_job = media.Job()
+            new_job.url = INVALID_VIDEO
+            media.Video_Processor(new_job).process_job_sync()
+
+    def test_job_processing_9(self):
+        new_job = media.Job()
+        new_job.url = LOW_QUALITY_VIDEO
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_10(self):
+        new_job = media.Job()
+        new_job.url = ULTRA_HD_VIDEO
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.start_time = 1
+        new_job.end_time = 2
+        success_flag, path = media.Video_Processor(new_job).process_job_sync()
+        assert success_flag is True and os.path.isfile(path)
+
+    def test_job_processing_11(self):
+        with pytest.raises(media.YoutubeURLError):
+            new_job = media.Job()
+            new_job.url = PLAYLIST
+            media.Video_Processor(new_job).process_job_sync()
+
+    def test_job_processing_12(self):
+        with pytest.raises(media.InvalidInputs):
+            new_job = media.Job()
+            new_job.url = ""
+            media.Video_Processor(new_job).process_job_sync()
+
+    def test_job_processing_13(self):
+        with pytest.raises(FileNotFoundError):
+            new_job = media.Job()
+            new_job.filepath = "dsfsdfsdf134sdf"
+            media.Video_Processor(new_job).process_job_sync()

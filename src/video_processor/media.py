@@ -20,6 +20,10 @@ class YoutubeURLError(Exception):
     pass
 
 
+class InvalidInputs(Exception):
+    pass
+
+
 def open_video_dialog(video_name):
     """If running app interactively, ask user whether the video product should be opened -> returns bool."""
     msg_box_yes_no = None
@@ -418,6 +422,9 @@ class Video_Processor:
     def process_job(self):
         # Triage for whether yt download is required
 
+        if not self.job.url and not self.job.filepath:
+            raise InvalidInputs("No valid input for video work - url or path.")
+
         if self.is_youtube_job:
             self.process_yt_job()
         else:
@@ -437,12 +444,12 @@ class Video_Processor:
             job_to_process = mp.Process(target=self.process_job)
             job_to_process.start()
 
-    def process_job_sync(self) -> bool:
+    def process_job_sync(self):
         """Async processing of video processing jobs"""
         if self.job_runnable:
-            success_flag, _ = self.process_job()
-            return success_flag
-        return False
+            success_flag, path = self.process_job()
+            return success_flag, path
+        return False, None
 
     def generate_video_path(self):
         """Generates path - random name if no name & generates path"""
