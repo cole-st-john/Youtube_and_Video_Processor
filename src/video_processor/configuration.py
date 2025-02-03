@@ -148,18 +148,18 @@ class Configuration:
     def __init__(self):
         check_app_dependencies()
 
+        self.GUI_APPEARANCE_MODE = "System"  # Modes: "System" (standard), "Dark", "Light"
+        self.GUI_COLOR_THEME = "blue"  # Themes: "blue" (standard), "green", "dark-blue"
+        self.APP_NAME = "Video downloader and processor app"
+        self.RUN_INTERACTIVE = os.getenv("TEST_MODE") != "1"
+
         CONFIG_FILENAME = "video_process_config.ini"
         self.config_path = os.getcwd()
         self.config_fullpath = os.path.join(self.config_path, CONFIG_FILENAME)
         self.config_info: Configuration_Info
+
         self.get_config_information()
         self.LAST_VALUES_FULLPATH = os.path.join(self.config_info.output_path, "last_values.json")
-
-        self.GUI_APPEARANCE_MODE = "System"  # Modes: "System" (standard), "Dark", "Light"
-        self.GUI_COLOR_THEME = "blue"  # Themes: "blue" (standard), "green", "dark-blue"
-        # print("Test env: ", os.getenv("TEST_MODE"))
-        self.RUN_INTERACTIVE = os.getenv("TEST_MODE") != "1"
-        self.APP_NAME = "Video downloader and processor app"
 
     def prompt_user_for_config(self):
         self.config_info = Config_Gui().return_config_info()
