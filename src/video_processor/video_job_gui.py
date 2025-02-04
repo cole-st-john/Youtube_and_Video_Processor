@@ -2,7 +2,7 @@ from tkinter import StringVar
 
 import customtkinter
 
-from video_processor.configuration import config
+from video_processor import config
 
 customtkinter.set_appearance_mode(config.GUI_APPEARANCE_MODE)
 customtkinter.set_default_color_theme(config.GUI_COLOR_THEME)

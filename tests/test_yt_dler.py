@@ -5,7 +5,7 @@ import pytest
 
 # import inspect
 # import video_processor
-from video_processor import app, media  # , ffmpeg_tools, video_job_gui
+from video_processor import app, config, media  # , ffmpeg_tools, video_job_gui
 
 # Checking test dependencies
 dependencies = ["pytest-env"]

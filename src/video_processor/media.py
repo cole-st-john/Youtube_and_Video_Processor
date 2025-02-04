@@ -10,10 +10,10 @@ from tkinter import messagebox as msg
 from random import randint
 from pytubefix import YouTube
 
+from video_processor import config, video_job_gui
 # from pytubefix import exceptions as pytubeexceptions
 from video_processor.ffmpeg_tools import Ffmpeg_Tools
 from video_processor import video_job_gui
-from video_processor.configuration import config
 
 
 class YoutubeURLError(Exception):

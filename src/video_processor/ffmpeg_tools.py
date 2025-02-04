@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-# from video_processor.configuration import config
+from rich import print
 
 
 class Ffmpeg_Tools:
