@@ -1,19 +1,15 @@
 import multiprocessing as mp
 import os
-
-# import shutil
 import subprocess
-
-# import sys
 import tkinter as tk
-from tkinter import messagebox as msg
 from random import randint
+from tkinter import messagebox as msg
+
 from pytubefix import YouTube
+from rich import print
 
 from video_processor import config, video_job_gui
-# from pytubefix import exceptions as pytubeexceptions
 from video_processor.ffmpeg_tools import Ffmpeg_Tools
-from video_processor import video_job_gui
 
 
 class YoutubeURLError(Exception):
@@ -45,6 +41,7 @@ def open_video_dialog(video_name):
             message=f"Video work on {video_name} complete.\n\nOpen video product?",
         )
 
+    print("Message box closed. ===========")
     root.destroy()
 
     return msg_box_yes_no
@@ -145,7 +142,7 @@ class Image:
     """Object carrying common cover image information/methods"""
 
     def __init__(self, video_path, cover_time):
-        self.path = config.config_info.output_path
+        self.path = config.output_dir
         self.name = "cover_pic"
         self.ext = ".jpg"
         self.cover_image_path = self.generate_cover_img_path()
@@ -247,7 +244,7 @@ class Job:
         raw_params = list()
         try:
             # Read previous file params from file
-            with open(config.LAST_VALUES_FULLPATH) as file:
+            with open(config.last_values_filepath) as file:
                 raw_params = [str(line).strip() for line in file]
 
                 def transform_nulls(x):
@@ -309,7 +306,7 @@ class Job:
             self.filepath = self.processed_output_path
 
         # Overwrite/create file contents with new parameters
-        with open(config.LAST_VALUES_FULLPATH, "w") as file:
+        with open(config.last_values_filepath, "w") as file:
             value_string = "\n".join(
                 [
                     str(x)
@@ -361,7 +358,7 @@ class Video_Processor:
         self.temp_raw_files = list()
 
         # modifying job
-        self.output_dir = config.config_info.output_path
+        self.output_dir = config.output_dir
         self.job.name = gen_name(job.name)
         self.temp_combined_stream_path = os.path.join(
             self.output_dir,
@@ -414,7 +411,7 @@ class Video_Processor:
     def wrap_up_job(self):
         self.job.document_job_parameters()
 
-        if config.RUN_INTERACTIVE and open_video_dialog(self.job.processed_output_path):
+        if config.run_interactive and open_video_dialog(self.job.processed_output_path):
             self.open_video_result()
 
         self.clean_up_temp_files()
@@ -516,9 +513,9 @@ class Video_Processor:
         """open video file in default app - ie. vlc"""
         # TODO: DONT START UNTIL REENCODING COMPLETE
 
-        if "windows" in config.config_info.platform:
+        if "windows" in config.platform:
             os.startfile(self.job.processed_output_path)
-        if "wsl" in config.config_info.platform:
+        if "wsl" in config.platform:
             try:
                 subprocess.run(
                     [

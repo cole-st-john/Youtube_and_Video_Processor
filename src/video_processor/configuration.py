@@ -1,12 +1,15 @@
+"""Provides general configuration information and guis for the application"""
+
 import os
-import platform
 import subprocess
 import sys
 import tkinter as tk
 from dataclasses import dataclass
+from platform import platform
 
 import customtkinter
 import jsonpickle
+from rich import print
 
 
 class Config_Gui(customtkinter.CTk):
@@ -96,13 +99,7 @@ class Config_Gui(customtkinter.CTk):
 
     def gather_input(self):
         # Query values
-        output_path = self.output_path_entry.get()
-
-        # Compose values into config
-        self.config_info = Configuration_Info(
-            output_path,
-            platform.platform().lower(),
-        )
+        self.output_dir = self.output_path_entry.get().replace('"', "")
 
         # Signal close
         self.destroy()
@@ -113,14 +110,8 @@ class Config_Gui(customtkinter.CTk):
         print("User chose to exit configuration gui.")
         sys.exit()
 
-    def return_config_info(self):
-        return self.config_info
-
-
-@dataclass
-class Configuration_Info:
-    output_path: str
-    platform: str
+    def transfer_config(self, other):
+        Stored_Config(self.output_dir).load(other)
 
 
 def check_app_dependencies():
@@ -142,63 +133,99 @@ def check_app_dependencies():
     check_if_ffpmeg_available()
 
 
-class Configuration:
+@dataclass
+class Stored_Config:
+    output_dir: str
+
+    def valid(self) -> bool:
+        """validate stored config items (before use)"""
+        valid_check = True
+        if not os.path.isdir(self.output_dir):
+            valid_check = False
+        return valid_check
+
+    def load(self, other) -> None:
+        """load stored configs into Config object"""
+        if self.valid():
+            for key, value in self.__dict__.items():
+                if key and key not in ("__name__",):
+                    setattr(other, key, value)
+
+
+@dataclass
+class Config:
     """Providing for user configuration of the app through gui and separate saving of configuration file"""
 
-    def __init__(self):
-        check_app_dependencies()
+    output_dir: str = ""
+    config_dir: str = os.getcwd()
+    run_interactive: bool = os.getenv("TEST_MODE") != "1"
+    APP_NAME: str = "Video Downloader And Processor App"
+    GUI_APPEARANCE_MODE: str = "System"
+    GUI_COLOR_THEME: str = "blue"
+    CONFIG_FILENAME: str = "video_process_config.json"
+    LAST_VALUES_FILENAME: str = "last_values.json"
+    platform: str = platform().lower()
+    config_path: str = os.path.join(config_dir, CONFIG_FILENAME)
+    existing_config: bool = os.path.isfile(config_path)
+    last_values_filepath: str = ""
 
-        self.GUI_APPEARANCE_MODE = "System"  # Modes: "System" (standard), "Dark", "Light"
-        self.GUI_COLOR_THEME = "blue"  # Themes: "blue" (standard), "green", "dark-blue"
-        self.APP_NAME = "Video downloader and processor app"
-        self.RUN_INTERACTIVE = os.getenv("TEST_MODE") != "1"
+    VALID_GUI_COLOR_THEMES = {"blue", "green", "dark-blue"}
+    VALID_GUI_APPEARANCES = {"System", "Dark", "Light"}
 
-        CONFIG_FILENAME = "video_process_config.ini"
-        self.config_path = os.getcwd()
-        self.config_fullpath = os.path.join(self.config_path, CONFIG_FILENAME)
-        self.config_info: Configuration_Info
-
-        self.get_config_information()
-        self.LAST_VALUES_FULLPATH = os.path.join(self.config_info.output_path, "last_values.json")
+    def load_saved(self):
+        with open(self.config_path) as json_file:
+            json_str = json_file.read()
+            saved_config: Stored_Config = jsonpickle.decode(string=json_str, classes=Stored_Config)
+            if saved_config:
+                saved_config.load(self)
 
     def prompt_user_for_config(self):
-        self.config_info = Config_Gui().return_config_info()
-
-    def validate_config(self):
-        # Validate path =================================
-        output_path = self.config_info.output_path
-        output_path = output_path.replace('"', "")  # remove quotations
-        if not os.path.isdir(output_path):
-            self.prompt_user_for_config()
-        self.config_info.output_path = output_path
+        Config_Gui().transfer_config(self)
 
     def store_config(self):
         # config -> json
-        with open(self.config_fullpath, "w") as json_file:
-            json_str = jsonpickle.encode(self.config_info)
-            json_file.write(json_str)
+        with open(self.config_path, "w") as json_file:
+            json_str = jsonpickle.encode(Stored_Config(self.output_dir))
+            json_file.write(str(json_str))
 
-    def get_config_information(self):
-        # If no config - get values with gui and store them
-        if not os.path.isfile(self.config_fullpath):
-            print("Missing config file - creating it.")
-            self.prompt_user_for_config()
-            self.validate_config()
+    def set_dependent_config_elements(self):
+        self.last_values_filepath = os.path.join(self.output_dir, self.LAST_VALUES_FILENAME)
+
+    def valid_config(self):
+        """Validate config"""
+        if not self.output_dir:
+            return False
+        if not os.path.isdir(self.output_dir):
+            return False
+        # if self.GUI_APPEARANCE_MODE not in self.VALID_GUI_APPEARANCES:
+        #     return False
+        # if not os.path.isdir(self.config_dir):
+        #     return False
+        return True
+
+    def set(self):
+        print(f"Configuring {self.APP_NAME}")
+
+        check_app_dependencies()
+
+        if self.run_interactive:
+            if self.existing_config:
+                self.load_saved()
+
+            while not self.valid_config():
+                self.prompt_user_for_config()
+
             self.store_config()
 
-        # otherwise - pull in configuration details
         else:
-            print("Found Config File - processing inputs.")
-            # json -> config
-            with open(self.config_fullpath) as json_file:
-                json_str = json_file.read()
-                self.config_info = jsonpickle.decode(json_str, classes=Configuration_Info)
-                # platform override
-                self.config_info.platform = platform.platform().lower()
+            # make temporary directory in cwd for outputs of tests
+            self.output_dir = os.path.join(self.config_dir, "tests", "test_temp")
 
-        print(f"Configuration Output Path: {self.config_info.output_path}")
-        # print(f"Platform: {self.config_info.platform}")
-        # return self.config_info
+            # we wont store the test config
+
+        self.set_dependent_config_elements()
+
+        return self
 
 
-config = Configuration()
+config = Config().set()
