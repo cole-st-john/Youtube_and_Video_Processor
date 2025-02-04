@@ -1,7 +1,10 @@
-import os
-import sys
 import importlib.metadata
+import os
+import shutil
+import sys
+
 import pytest
+from rich import print
 
 # import inspect
 # import video_processor
@@ -9,6 +12,14 @@ from video_processor import app, config, media  # , ffmpeg_tools, video_job_gui
 
 # Checking test dependencies
 dependencies = ["pytest-env"]
+
+
+def clean_test_dir(test_dir):
+    if os.path.isdir(test_dir):
+        shutil.rmtree(test_dir)
+        # os.rmdir(test_dir)
+    if not os.path.isdir(test_dir):
+        os.mkdir(test_dir)
 
 
 def check_dependencies(dependencies):
@@ -27,6 +38,7 @@ def check_dependencies(dependencies):
 # using env variable in pyproject.toml and pytest-env
 check_dependencies(dependencies)
 
+clean_test_dir(config.output_dir)
 
 # different tests resources
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))

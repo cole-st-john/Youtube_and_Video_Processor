@@ -1,6 +1,7 @@
 from tkinter import StringVar
 
 import customtkinter
+from rich import print
 
 from video_processor import config
 
