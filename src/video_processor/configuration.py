@@ -175,7 +175,7 @@ class Config:
     def load_saved(self):
         with open(self.config_path) as json_file:
             json_str = json_file.read()
-            saved_config: Stored_Config = jsonpickle.decode(string=json_str, classes=Stored_Config)
+            saved_config: Stored_Config = jsonpickle.decode(json_str, classes=Stored_Config)  # type: ignore
             if saved_config:
                 saved_config.load(self)
 
