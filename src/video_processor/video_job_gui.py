@@ -17,8 +17,16 @@ class VideoJobGui(customtkinter.CTk):
     def __init__(self, job):
         super().__init__()
         self.user_quit = False
-        self.job = job
-        self.raw_gui_video_params = self.job.raw_video_params
+        self.job: Job = job
+        # self.raw_gui_video_params = self.job.raw_video_params
+        self.raw_gui_video_params: dict = {}
+        self.url_textvar = StringVar()
+        self.file_textvar = StringVar()
+        self.name_textvar = StringVar()
+        self.start_var = StringVar()
+        self.end_var = StringVar()
+        self.cover_var = StringVar()
+        self.speed_var = StringVar()
 
         # GUI SETTINGS ====================================
         self.inputs_frame_dict = {
@@ -197,7 +205,6 @@ class VideoJobGui(customtkinter.CTk):
         self.url_label = customtkinter.CTkLabel(self.inputs_frame, text="Youtube URL:")
         self.url_label.grid(**self.url_label_dict)
 
-        self.url_textvar = StringVar()
         self.url_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Youtube URL",
@@ -209,7 +216,6 @@ class VideoJobGui(customtkinter.CTk):
         self.filepath_label = customtkinter.CTkLabel(self.inputs_frame, text="Filepath:")
         self.filepath_label.grid(**self.filepath_label_dict)
 
-        self.file_textvar = StringVar()
         self.file_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Video Filepath",
@@ -221,7 +227,6 @@ class VideoJobGui(customtkinter.CTk):
         self.name_label = customtkinter.CTkLabel(self.inputs_frame, text="Name:")
         self.name_label.grid(**self.name_label_dict)
 
-        self.name_textvar = StringVar()
         self.name_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Name",
@@ -232,7 +237,7 @@ class VideoJobGui(customtkinter.CTk):
         # Start Time
         self.start_label = customtkinter.CTkLabel(self.inputs_frame, text="Start Time:")
         self.start_label.grid(**self.start_label_dict)
-        self.start_var = StringVar()
+
         self.start_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Start Time",
@@ -243,7 +248,7 @@ class VideoJobGui(customtkinter.CTk):
         # End Time
         self.end_label = customtkinter.CTkLabel(self.inputs_frame, text="End Time:")
         self.end_label.grid(**self.end_label_dict)
-        self.end_var = StringVar()
+
         self.end_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="End Time",
@@ -254,7 +259,7 @@ class VideoJobGui(customtkinter.CTk):
         # Cover photo time
         self.cover_label = customtkinter.CTkLabel(self.inputs_frame, text="Cover Photo Time:")
         self.cover_label.grid(**self.cover_label_dict)
-        self.cover_var = StringVar()
+
         self.cover_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="Cover Photo Time",
@@ -265,7 +270,7 @@ class VideoJobGui(customtkinter.CTk):
         # Speed
         self.speed_label = customtkinter.CTkLabel(self.inputs_frame, text="Speed")
         self.speed_label.grid(**self.speed_label_dict)
-        self.speed_var = StringVar()
+
         self.speed_entry = customtkinter.CTkEntry(
             self.inputs_frame,
             placeholder_text="1x (no x needed)",
@@ -307,7 +312,6 @@ class VideoJobGui(customtkinter.CTk):
         else:
             url = self.raw_gui_video_params["url"]
             filepath = self.raw_gui_video_params["filepath"]
-            # name = self.raw_gui_video_params["name"]
             start = self.raw_gui_video_params["start"]
             end = self.raw_gui_video_params["end"]
             cover = self.raw_gui_video_params["cover"]
@@ -316,7 +320,6 @@ class VideoJobGui(customtkinter.CTk):
             # populate last values
             self.url_textvar.set(url)
             self.file_textvar.set(filepath)
-            # self.name_textvar.set(name)
             if start and float(start):
                 self.start_var.set(start)
             if end and float(end):
@@ -326,8 +329,7 @@ class VideoJobGui(customtkinter.CTk):
             if speed and float(speed):
                 self.speed_var.set(speed)
 
-            # refresh gui
-            self.update()
+            self.update_idletasks()
 
     def gather_user_input_and_close(self):
         """Extract user entered gui information for a video job"""
@@ -340,24 +342,21 @@ class VideoJobGui(customtkinter.CTk):
         self.raw_gui_video_params["speed"] = self.speed_entry.get()
 
         # Close
-        self.withdraw()
-        self.quit()
+        self.destroy()
 
         print("Confirmed", flush=True)
 
     def execute_gui(self):
         """Run the gui and return the inputs"""
         self.mainloop()
-        # self.quit()
         return self.user_quit, self.raw_gui_video_params
 
     def upon_closing_gui(self):
         """Action to be taken if user Xs out of gui"""
         self.user_quit = True
-        # print("User chose to exit GUI", flush=True)
+
         print("User exited GUI")
-        self.withdraw()
-        self.quit()
+        self.destroy()
 
         print("Exiting", flush=True)
 

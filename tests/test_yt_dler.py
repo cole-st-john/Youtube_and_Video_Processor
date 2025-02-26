@@ -40,7 +40,7 @@ EXAMPLE_VIDEO_W_SHARE_AND_TIME = "https://youtu.be/KKYB59JZ4-4?si=kzLX0t0OhktE0C
 EXAMPLE_VIDEO_W_SHARE = "https://youtu.be/KKYB59JZ4-4?si=kzLX0t0OhktE0CX_"
 SHORT_VIDEO_1 = "https://www.youtube.com/shorts/zthRM9pI6TQ"  # < 5 seconds
 VIDEO_IN_PLAYLIST_1 = "https://www.youtube.com/watch?v=KKYB59JZ4-4&list=PLrU3Bc28AUqz7NCQfpzRuALldz8uAx9Ns"
-PLAYLIST = "https://studio.youtube.com/playlist/PLrU3Bc28AUqz7NCQfpzRuALldz8uAx9Ns/videos"
+PLAYLIST = "https://www.youtube.com/playlist?list=PLrU3Bc28AUqz7NCQfpzRuALldz8uAx9Ns"
 INVALID_VIDEO = "https://www.youtube.com/shorts/AFDFSSSDFF4GG444"
 LOW_QUALITY_VIDEO = "https://www.youtube.com/watch?v=V6R-nEiTwcs"  # 480p
 ULTRA_HD_VIDEO = "https://www.youtube.com/watch?v=R3GfuzLMPkA"  # 2160p
@@ -65,13 +65,13 @@ class Test_Config_Gui:
 
 # Job processing
 class Test_Job_Processing:
-    # def test_job_processing_1(self):
-    #     new_job = media.Job()
-    #     new_job.url = SHORT_VIDEO_1
-    #     new_job.name = f"{sys._getframe().f_code.co_name}"
-    #     new_job.stop_event = False
-    #     media.Video_Processor(new_job).process_job_async()
-    #     assert 1 == 1
+    def test_job_processing_1(self):
+        new_job = media.Job()
+        new_job.url = SHORT_VIDEO_1
+        new_job.name = f"{sys._getframe().f_code.co_name}"
+        new_job.stop_event = False
+        media.Video_Processor(new_job).process_job_async()
+        assert 1 == 1
 
     def test_job_processing_2(self, test_dir):
         new_job = media.Job()

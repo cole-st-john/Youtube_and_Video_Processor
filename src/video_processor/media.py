@@ -24,7 +24,6 @@ def open_video_dialog(video_name):
     """If running app interactively, ask user whether the video product should be opened -> returns bool."""
     msg_box_yes_no = None
 
-    # some root tk window
     root = tk.Tk()
     root.withdraw()
     print("See message_box to open video ===========")
@@ -58,6 +57,7 @@ def sync_wrapper(func):
 
 
 # def yt_parse_url(url):
+#     # TODO: ADD THIS
 #     # https://www.youtube.com/watch?v=RVmq1tFerRc
 #     # https://www.youtube.com/watch?v=KKYB59JZ4-4
 #     # https://youtu.be/KKYB59JZ4-4?si=jXTKdXyiVA32v5yy
@@ -286,7 +286,6 @@ class Job:
 
     def get_input(self):
         """Initiate GUI for user inputs and process/validate the raw inputs"""
-        self.retrieve_last_params_from_file()
         self.stop_event, raw_video_params = video_job_gui.VideoJobGui(self).execute_gui()
         if self.stop_event:
             return self
@@ -336,15 +335,6 @@ class Video_Processor:
         # Enablers of async job processing
         self.video_process = str(os.getpid())
         self.processing_lock = mp.Lock()
-
-        # processed video params
-        # self.url: str = ""
-        # self.filepath: str = ""
-        # self.name: str = ""
-        # self.start_time: float | None
-        # self.end_time: float | None
-        # self.cover_time: float | None
-        # self.speed_mult: float | None
 
         # video processing related
         self.is_youtube_job = bool(job.url)
@@ -551,8 +541,8 @@ def video_downloader_and_processor(end_flag=False):
             Video_Processor(new_job).process_job_async()
             # Video_Processor(new_job).process_job_sync()  # for debugging
         except Exception as e:
-            print(f"Error in dl of {new_job} - error: {e}")
-            # pass  # FIXME:
+            print(f"Error in {new_job} - error: {e}")
+            # FIXME:
 
     print(f"Closing {config.APP_NAME}.", "=" * 10)
 
