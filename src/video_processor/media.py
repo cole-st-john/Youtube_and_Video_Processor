@@ -6,6 +6,7 @@ from random import randint
 from tkinter import messagebox as msg
 
 from pytubefix import YouTube
+from pytubefix.cli import on_progress
 from rich import print
 
 from video_processor import config, video_job_gui
@@ -31,7 +32,9 @@ def open_video_dialog(video_name):
         # windows showerror
         top = tk.Toplevel(root)
         top.iconify()
-        msg_box_yes_no = msg.askyesno(title="Video Tool", message=f"Video work on {video_name} complete.\n\nOpen video product?", parent=top)
+        msg_box_yes_no = msg.askyesno(
+            title="Video Tool", message=f"Video work on {video_name} complete.\n\nOpen video product?", parent=top
+        )
         top.destroy()
     else:
         # non-windows showerror
@@ -81,13 +84,15 @@ def yt_is_valid_url(url):
     try:
         YouTube(url, "WEB").check_availability()
         return True
-    except Exception:
+    except Exception as e:
+        print(e)
         return False
 
 
 def yt_get_streams(url):
     """return all stream for a youtube url"""
-    return YouTube(url=url, client="WEB").streams
+    return YouTube(url=url, use_oauth=True, allow_oauth_cache=True, on_progress_callback=on_progress).streams
+    # return YouTube(url=url, client="WEB").streams
 
 
 def yt_filter_video_streams(streams):
