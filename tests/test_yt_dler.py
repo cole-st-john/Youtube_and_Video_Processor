@@ -7,6 +7,8 @@ import pytest
 from rich import print
 
 from video_processor import app, config, media  # , ffmpeg_tools, video_job_gui
+from pytubefix import YouTube
+from pytubefix.cli import on_progress
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -61,6 +63,15 @@ class Test_Integration:
 # configuration ====================
 class Test_Config_Gui:
     pass
+
+
+class Test_Base_Libraries:
+    def test_simple_auth(self):
+        url = "https://www.youtube.com/shorts/0pbd9I0F38E"
+        yt = YouTube(url, use_oauth=True, allow_oauth_cache=True, on_progress_callback=on_progress)
+        ys = yt.streams.get_highest_resolution()
+        str = ys.download()  # Authenticate once for subsequent downloads
+        assert str is not None, "Simple oauth didnt work"
 
 
 # Job processing
