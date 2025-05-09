@@ -97,11 +97,11 @@ class Ffmpeg_Tools:
                 ]
 
             # Avoid re-encoding if speed not changing - not sure what else drives this
-            if not speed:
-                ffmpeg_args += [
-                    "-c",
-                    "copy",
-                ]
+            # if not speed:
+            #     ffmpeg_args += [
+            #         "-c",
+            #         "copy",
+            #     ]
 
             # where to output it
             ffmpeg_args += [
@@ -188,11 +188,11 @@ class Ffmpeg_Tools:
             ]
 
         # Avoid re-encoding if speed not changing - not sure what else drives this
-        if not speed:
-            ffmpeg_args += [
-                "-c",
-                "copy",
-            ]
+        # if not speed:
+        #     ffmpeg_args += [
+        #         "-c",
+        #         "copy",
+        #     ]
 
         # Output path
         ffmpeg_args.append(output_path)
