@@ -167,5 +167,5 @@ cython_debug/
 *todo.txt
 
 # Specific 
-video_process_config.ini
+video_process_config.json
 

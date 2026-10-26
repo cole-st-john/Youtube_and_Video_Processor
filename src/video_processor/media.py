@@ -1,16 +1,72 @@
 import multiprocessing as mp
 import os
+import socket
 import subprocess
+import time
 import tkinter as tk
+import urllib.error
+import webbrowser
 from random import randint
 from tkinter import messagebox as msg
 
 from pytubefix import YouTube
+from pytubefix.botGuard import bot_guard
 from pytubefix.cli import on_progress
+from pytubefix.exceptions import (
+    AgeCheckRequiredAccountError,
+    AgeCheckRequiredError,
+    AgeRestrictedError,
+    LoginRequired,
+    MembersOnly,
+    PoTokenRequired,
+)
 from rich import print
 
 from video_processor import config, video_job_gui
 from video_processor.ffmpeg_tools import Ffmpeg_Tools
+
+# Errors that mean "this video needs a signed-in account", not "this video is unavailable" -
+# use_oauth=True forces pytubefix onto its flaky TV client, so we only pay that cost when needed.
+SIGN_IN_REQUIRED_ERRORS = (
+    AgeRestrictedError,
+    AgeCheckRequiredError,
+    AgeCheckRequiredAccountError,
+    LoginRequired,
+    MembersOnly,
+)
+
+# botGuard's poToken generation shells out to a bundled node to hit a google.com endpoint -
+# transient network hiccups there make pytubefix silently fall back to a tokenless (403-prone)
+# stream, so a fresh retry (new YouTube object -> new botGuard attempt) is usually all it takes.
+YT_DOWNLOAD_RETRIES = 3
+YT_DOWNLOAD_RETRY_DELAY_SECS = 3
+# HTTPError is a subclass of URLError, so this also covers the plain 403 case.
+YT_DOWNLOAD_RETRYABLE_ERRORS = (urllib.error.URLError, PoTokenRequired, socket.timeout)
+
+# Neither pytubefix's urlopen calls (video info, SABR chunk fetches) nor its botGuard.js
+# subprocess set a timeout, so a stalled connection - rather than a clean error like a TLS
+# reset or a 403 - blocks forever instead of letting our retry loop above take over.
+YT_SOCKET_TIMEOUT_SECS = 60
+socket.setdefaulttimeout(YT_SOCKET_TIMEOUT_SECS)
+
+BOTGUARD_TIMEOUT_SECS = 30
+
+
+def _generate_po_token_with_timeout(video_id: str) -> str:
+    try:
+        result = subprocess.check_output(
+            [bot_guard.NODE_PATH, bot_guard.VM_PATH, video_id],
+            stderr=subprocess.PIPE,
+            timeout=BOTGUARD_TIMEOUT_SECS,
+        ).decode()
+        return result.replace("\n", "")
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"botGuard.js timed out after {BOTGUARD_TIMEOUT_SECS}s (likely a stalled network call)") from e
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to execute botGuard.js: {e.stderr.decode().strip()}") from e
+
+
+bot_guard.generate_po_token = _generate_po_token_with_timeout
 
 
 class YoutubeURLError(Exception):
@@ -49,6 +105,32 @@ def open_video_dialog(video_name):
     return msg_box_yes_no
 
 
+def yt_oauth_verifier(verification_url, user_code):
+    """Tk modal dialog for YouTube's OAuth device-code flow.
+
+    Replaces pytubefix's default console `input()` prompt, which blocks forever with
+    no visible feedback when this app is run without a terminal (see README).
+    """
+    root = tk.Tk()
+    root.title("YouTube Sign-in Required")
+    root.attributes("-topmost", True)
+    root.resizable(False, False)
+
+    tk.Label(root, text="Sign in to YouTube to continue", font=("", 12, "bold")).pack(padx=30, pady=(20, 10))
+    tk.Label(root, text="1. Open the sign-in page\n2. Enter this code:", justify="left").pack(padx=30, pady=(0, 5))
+
+    code_entry = tk.Entry(root, justify="center", font=("", 16, "bold"), width=16)
+    code_entry.insert(0, user_code)
+    code_entry.config(state="readonly")
+    code_entry.pack(padx=30, pady=5)
+
+    tk.Button(root, text="Open Sign-in Page", command=lambda: webbrowser.open(verification_url)).pack(pady=5)
+    tk.Button(root, text="I've Signed In - Continue", command=root.destroy).pack(pady=(5, 20))
+
+    webbrowser.open(verification_url)
+    root.mainloop()
+
+
 def sync_wrapper(func):
     """impose synchronous lock during the wrapped 'work'"""
 
@@ -84,15 +166,27 @@ def yt_is_valid_url(url):
     try:
         YouTube(url, "WEB").check_availability()
         return True
+    except SIGN_IN_REQUIRED_ERRORS:
+        # not invalid - just needs oauth, which yt_get_streams falls back to
+        return True
     except Exception as e:
         print(e)
         return False
 
 
 def yt_get_streams(url):
-    """return all stream for a youtube url"""
-    return YouTube(url=url, use_oauth=True, allow_oauth_cache=True, on_progress_callback=on_progress).streams
-    # return YouTube(url=url, client="WEB").streams
+    """return all streams for a youtube url - tries without sign-in first, only falls back to
+    oauth (and its flaky forced TV client) if the video actually requires a signed-in account"""
+    try:
+        return YouTube(url=url, client="WEB", on_progress_callback=on_progress).streams
+    except SIGN_IN_REQUIRED_ERRORS:
+        return YouTube(
+            url=url,
+            use_oauth=True,
+            allow_oauth_cache=True,
+            oauth_verifier=yt_oauth_verifier,
+            on_progress_callback=on_progress,
+        ).streams
 
 
 def yt_filter_video_streams(streams):
@@ -274,7 +368,15 @@ class Job:
         """Perform a few basic checks of the user inputs for video processing"""
         if self.url:
             try:
-                YouTube(self.url, "WEB").check_availability()
+                YouTube(self.url, client="WEB").check_availability()
+            except SIGN_IN_REQUIRED_ERRORS:
+                try:
+                    YouTube(
+                        self.url, use_oauth=True, allow_oauth_cache=True, oauth_verifier=yt_oauth_verifier
+                    ).check_availability()
+                except Exception as ex:
+                    print(f"{ex}")
+                    self.valid_inputs = False
             except Exception as ex:
                 print(f"{ex}")
                 self.valid_inputs = False
@@ -463,20 +565,36 @@ class Video_Processor:
         if not yt_is_valid_url(self.job.url):
             raise YoutubeURLError(f"URL seems to be bad / unavailable {self.job.url}")
 
-        # Fetch youtube streams
-        streams = yt_get_streams(self.job.url)
+        for attempt in range(1, YT_DOWNLOAD_RETRIES + 1):
+            try:
+                # Fetch youtube streams
+                streams = yt_get_streams(self.job.url)
 
-        # Select and download video
-        yt_video_stream = yt_filter_highest_quality_video_stream(streams)
-        # print(f"Downloading Video: {yt_video_stream.title}")
-        self.local_video_stream = yt_download_stream(yt_video_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="video"))
-        self.temp_raw_files.append(self.local_video_stream)
+                # Select and download video
+                yt_video_stream = yt_filter_highest_quality_video_stream(streams)
+                # print(f"Downloading Video: {yt_video_stream.title}")
+                self.local_video_stream = yt_download_stream(
+                    yt_video_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="video")
+                )
+                self.temp_raw_files.append(self.local_video_stream)
 
-        # if audio only available seperately in high quality - select and download audio
-        if not yt_video_stream_includes_audio(yt_video_stream):
-            yt_audio_stream = yt_filter_highest_quality_audio_stream(streams)
-            self.local_audio_stream = yt_download_stream(yt_audio_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="audio"))
-            self.temp_raw_files.append(self.local_audio_stream)
+                # if audio only available seperately in high quality - select and download audio
+                if not yt_video_stream_includes_audio(yt_video_stream):
+                    yt_audio_stream = yt_filter_highest_quality_audio_stream(streams)
+                    self.local_audio_stream = yt_download_stream(
+                        yt_audio_stream, self.output_dir, yt_gen_temp_name(self.job.name, type="audio")
+                    )
+                    self.temp_raw_files.append(self.local_audio_stream)
+                break
+            except YT_DOWNLOAD_RETRYABLE_ERRORS as e:
+                if attempt == YT_DOWNLOAD_RETRIES:
+                    raise
+                print(
+                    f"YouTube download failed (attempt {attempt}/{YT_DOWNLOAD_RETRIES}), "
+                    f"likely a transient poToken/network issue - retrying: {e}",
+                    flush=True,
+                )
+                time.sleep(YT_DOWNLOAD_RETRY_DELAY_SECS)
 
     @sync_wrapper
     def extract_cover_photo_from_video(self):
